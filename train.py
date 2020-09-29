@@ -54,7 +54,6 @@ parser.add_argument("--manualSeed", type=int, default=0,
                     help="Seed for initializing training. (default:0)")
 parser.add_argument("--cuda", action="store_true", help="Enables cuda")
 
-
 args = parser.parse_args()
 print(args)
 
@@ -154,8 +153,9 @@ for epoch in range(args.epochs):
             mse = criterion(prediction, target)
             psnr = 10 * math.log10(1 / mse.item())
             avg_psnr += psnr
-            progress_bar.set_description(f"[{epoch + 1}/{args.epochs}][{iteration + 1}/{len(train_dataloader)}] "
-                                         f"Loss: {loss.item():.6f} PSNR: {psnr:.6f}.")
+            progress_bar.set_description(f"[{iteration + 1}/{len(val_dataloader)}] "
+                                         f"Loss: {loss.item():.6f} "
+                                         f"PSNR: {psnr:.2f}.")
 
     print(f"Average PSNR: {avg_psnr / len(val_dataloader):.2f} dB.")
 

@@ -153,7 +153,7 @@ for epoch in range(args.epochs):
             mse = criterion(prediction, target)
             psnr = 10 * math.log10(1 / mse.item())
             avg_psnr += psnr
-            progress_bar.set_description(f"[{iteration + 1}/{len(val_dataloader)}] "
+            progress_bar.set_description(f"Epoch: {epoch + 1} [{iteration + 1}/{len(val_dataloader)}] "
                                          f"Loss: {loss.item():.6f} "
                                          f"PSNR: {psnr:.2f}.")
 

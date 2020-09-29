@@ -130,6 +130,7 @@ dmypy.json
 
 data/DIV2K
 data/VOC2012
+data/video
 
 outputs
 results

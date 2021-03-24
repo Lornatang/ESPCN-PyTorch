@@ -1,4 +1,4 @@
-# Copyright 2020 Dakewe Biotech Corporation. All Rights Reserved.
+# Copyright 2021 Dakewe Biotech Corporation. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -52,14 +52,9 @@ model.eval()
 
 # Open image
 image = Image.open(args.file).convert("YCbCr")
-image_width = int(image.size[0] * args.scale_factor)
-image_height = int(image.size[1] * args.scale_factor)
-image = image.resize((image_width, image_height), Image.BICUBIC)
 y, cb, cr = image.split()
 
-preprocess = transforms.ToTensor()
-inputs = preprocess(y).view(1, -1, y.size[1], y.size[0])
-
+inputs = transforms.ToTensor()(y).view(1, -1, y.size[1], y.size[0])
 inputs = inputs.to(device)
 
 with torch.no_grad():
@@ -70,8 +65,8 @@ out_image_y *= 255.0
 out_image_y = out_image_y.clip(0, 255)
 out_image_y = Image.fromarray(np.uint8(out_image_y[0]), mode="L")
 
-out_img_cb = cb.resize(out_image_y.size, Image.BICUBIC)
-out_img_cr = cr.resize(out_image_y.size, Image.BICUBIC)
-out_img = Image.merge("YCbCr", [out_image_y, out_img_cb, out_img_cr]).convert("RGB")
+out_image_cb = cb.resize(out_image_y.size, Image.BICUBIC)
+out_image_cr = cr.resize(out_image_y.size, Image.BICUBIC)
+out_image = Image.merge("YCbCr", [out_image_y, out_image_cb, out_image_cr]).convert("RGB")
 # before converting the result in RGB
-out_img.save(f"espcn_{args.scale_factor}x.png")
+out_image.save(f"espcn_{args.scale_factor}x.png")

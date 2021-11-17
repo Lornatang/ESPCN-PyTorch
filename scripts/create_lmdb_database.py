@@ -33,7 +33,7 @@ def main(args):
     image = cv2.imread(os.path.abspath(f"{args.image_dir}/{image_file_names[0]}"))
     image = cv2.resize(image, [image.shape[0] // args.upscale_factor, image.shape[1] // args.upscale_factor], interpolation=cv2.INTER_CUBIC)
     _, image_byte = cv2.imencode(f".{image_file_names[0].split('.')[-1]}", image)
-    lmdb_map_size = image_byte.nbytes * total_image_number * 1.25
+    lmdb_map_size = image_byte.nbytes * total_image_number * 1.5
     print(lmdb_map_size)
 
     # Open LMDB write environment

@@ -32,10 +32,10 @@ def main(args):
         # Use PIL to read high-resolution image
         image = Image.open(f"{args.inputs_dir}/{image_file_name}")
 
-        for pos_x in range(0, image.size[0] - args.image_size + 1, args.step):
-            for pos_y in range(0, image.size[1] - args.image_size + 1, args.step):
+        for pos_x in range(0, image.size[0] - image_size + 1, args.step):
+            for pos_y in range(0, image.size[1] - image_size + 1, args.step):
                 # crop box xywh
-                crop_image = image.crop([pos_x, pos_y, pos_x + args.image_size, pos_y + args.image_size])
+                crop_image = image.crop([pos_x, pos_y, pos_x + image_size, pos_y + image_size])
                 # Save all images
                 crop_image.save(f"{image_dir}/{image_file_name.split('.')[-2]}_{pos_x}_{pos_y}.{image_file_name.split('.')[-1]}")
 

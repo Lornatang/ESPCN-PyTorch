@@ -20,8 +20,8 @@ from tqdm import tqdm
 
 
 def main(args):
-    train_image_dir = f"{args.inputs_dir}/x{args.upscale_factor}/train"
-    valid_image_dir = f"{args.inputs_dir}/x{args.upscale_factor}/valid"
+    train_image_dir = f"{args.images_dir}/x{args.upscale_factor}/train"
+    valid_image_dir = f"{args.images_dir}/x{args.upscale_factor}/valid"
 
     if not os.path.exists(train_image_dir):
         os.makedirs(train_image_dir)
@@ -40,8 +40,8 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Split train and valid dataset scripts (Use ESPCN functions).")
-    parser.add_argument("--inputs_dir", type=str, default="T91", help="Path to input image directory.")
+    parser = argparse.ArgumentParser(description="Split train and valid dataset scripts.")
+    parser.add_argument("--images_dir", type=str, default="T91", help="Path to input image directory.")
     parser.add_argument("--valid_samples_ratio", type=float, default=0.1, help="What percentage of the data is extracted from the training set into the validation set.  (Default: 0.1)")
     parser.add_argument("--upscale_factor", type=int, default=2, help="Image zoom scale. (Default: 2)")
     args = parser.parse_args()

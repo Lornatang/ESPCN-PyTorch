@@ -21,9 +21,9 @@ from torch.backends import cudnn as cudnn
 torch.manual_seed(0)
 device = torch.device("cuda", 0)
 cudnn.benchmark = True
-upscale_factor = 2
+upscale_factor = 3
 mode = "train"
-exp_name = "exp001"
+exp_name = "baseline"
 
 # ==============================================================================
 # Training configuration
@@ -31,16 +31,17 @@ exp_name = "exp001"
 if mode == "train":
     # Dataset
     # Image format
-    train_image_dir = f"data/T91/x{upscale_factor}/train"
-    valid_image_dir = f"data/T91/x{upscale_factor}/valid"
+    train_image_dir = f"data/T91/ESPCN/train"
+    valid_image_dir = f"data/T91/ESPCN/valid"
     # LMDB format
-    train_lr_lmdb_path = f"data/train_lmdb/ESPCN/T91_LR_lmdb"
+    train_lr_lmdb_path = f"data/train_lmdb/ESPCN/T91_LRbicx3_lmdb"
     train_hr_lmdb_path = f"data/train_lmdb/ESPCN/T91_HR_lmdb"
-    valid_lr_lmdb_path = f"data/valid_lmdb/ESPCN/T91_LR_lmdb"
+    valid_lr_lmdb_path = f"data/valid_lmdb/ESPCN/T91_LRbicx3_lmdb"
     valid_hr_lmdb_path = f"data/valid_lmdb/ESPCN/T91_HR_lmdb"
 
-    image_size = int(upscale_factor * 17)
+    image_size = 51
     batch_size = 16
+    num_workers = 4
 
     # Incremental training and migration training
     resume = False
@@ -48,25 +49,20 @@ if mode == "train":
     start_epoch = 0
     resume_weight = ""
 
-    # Total num epochs.
-    epochs = 100
+    # Total num epochs
+    epochs = 2000
 
-    # Model optimizer parameter (less training and low PSNR)
-    # model_optimizer_name = "sgd"
-    # model_lr = 1e-3
-    # model_momentum = 0.9
-    # model_weight_decay = 1e-7
-    # model_nesterov = False
-
-    # Modify optimizer parameter (faster training and better PSNR)
+    # Adam optimizer parameter
     model_optimizer_name = "adam"
-    model_lr = 1e-3
+    model_lr = 1e-2
     model_betas = (0.9, 0.999)
 
     # Optimizer scheduler parameter
     lr_scheduler_name = "multiStepLR"
-    lr_scheduler_milestones = [30, 80]
+    lr_scheduler_milestones = [1600, 1800]
     lr_scheduler_gamma = 0.1
+
+    print_frequency = 100
 
 # ==============================================================================
 # Verify configuration
@@ -77,4 +73,4 @@ if mode == "valid":
     sr_dir = f"results/test/{exp_name}"
     hr_dir = f"data/Set5/GTmod12"
 
-    model_path = f"results/{exp_name}/best.pth"
+    model_path = f"results/{exp_name}/last.pth"

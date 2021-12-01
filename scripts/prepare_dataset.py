@@ -20,8 +20,7 @@ from tqdm import tqdm
 
 
 def main() -> None:
-    image_dir = f"{args.output_dir}/x{args.upscale_factor}/train"
-    image_size = int(args.image_size * args.upscale_factor)
+    image_dir = f"{args.output_dir}/train"
 
     if os.path.exists(image_dir):
         shutil.rmtree(image_dir)
@@ -32,10 +31,10 @@ def main() -> None:
         # Use PIL to read high-resolution image
         image = Image.open(f"{args.inputs_dir}/{file_name}")
 
-        for pos_x in range(0, image.size[0] - image_size + 1, args.step):
-            for pos_y in range(0, image.size[1] - image_size + 1, args.step):
+        for pos_x in range(0, image.size[0] - args.image_size + 1, args.step):
+            for pos_y in range(0, image.size[1] - args.image_size + 1, args.step):
                 # crop box xywh
-                crop_image = image.crop([pos_x, pos_y, pos_x + image_size, pos_y + image_size])
+                crop_image = image.crop([pos_x, pos_y, pos_x + args.image_size, pos_y + args.image_size])
                 # Save all images
                 crop_image.save(f"{image_dir}/{file_name.split('.')[-2]}_{pos_x}_{pos_y}.{file_name.split('.')[-1]}")
 
@@ -44,9 +43,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Prepare database scripts.")
     parser.add_argument("--inputs_dir", type=str, default="T91/original", help="Path to input image directory. (Default: `T91/original`)")
     parser.add_argument("--output_dir", type=str, default="T91/ESPCN", help="Path to generator image directory. (Default: `T91/ESPCN`)")
-    parser.add_argument("--image_size", type=int, default=17, help="Low-resolution image size from raw image. (Default: 17)")
-    parser.add_argument("--step", type=int, default=13, help="Crop image similar to sliding window.  (Default: 13)")
-    parser.add_argument("--upscale_factor", type=int, default=2, help="Image zoom scale. (Default: 2)")
+    parser.add_argument("--image_size", type=int, default=51, help="Low-resolution image size from raw image. (Default: 51)")
+    parser.add_argument("--step", type=int, default=39, help="Crop image similar to sliding window.  (Default: 39)")
     args = parser.parse_args()
 
     main()

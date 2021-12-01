@@ -25,19 +25,17 @@ of [Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pix
 
 If you're new to ESPCN, here's an abstract straight from the paper:
 
-Recently, several models based on deep neural networks have achieved great success in terms of both reconstruction 
-accuracy and computational performance for single image super-resolution. In these methods, the low resolution (LR) 
-input image is upscaled to the high resolution (HR) space using a single filter, commonly bicubic interpolation, 
-before reconstruction. This means that the super-resolution (SR) operation is performed in HR space. We demonstrate 
-that this is sub-optimal and adds computational complexity. In this paper, we present the first convolutional neural 
-network (CNN) capable of real-time SR of 1080p videos on a single K2 GPU. To achieve this, we propose a novel CNN 
-architecture where the feature maps are extracted in the LR space. In addition, we introduce an efficient 
-sub-pixel convolution layer which learns an array of upscaling filters to upscale the final LR feature maps into 
-the HR output. By doing so, we effectively replace the handcrafted bicubic filter in the SR pipeline with more 
-complex upscaling filters specifically trained for each feature map, whilst also reducing the computational complexity 
-of the overall SR operation. We evaluate the proposed approach using images and videos from publicly available datasets 
-and show that it performs significantly better (+0.15dB on Images and +0.39dB on Videos) and is an order of magnitude 
-faster than previous CNN-based methods.
+Recently, several models based on deep neural networks have achieved great success in terms of both reconstruction accuracy and computational
+performance for single image super-resolution. In these methods, the low resolution (LR)
+input image is upscaled to the high resolution (HR) space using a single filter, commonly bicubic interpolation, before reconstruction. This means
+that the super-resolution (SR) operation is performed in HR space. We demonstrate that this is sub-optimal and adds computational complexity. In this
+paper, we present the first convolutional neural network (CNN) capable of real-time SR of 1080p videos on a single K2 GPU. To achieve this, we propose
+a novel CNN architecture where the feature maps are extracted in the LR space. In addition, we introduce an efficient sub-pixel convolution layer
+which learns an array of upscaling filters to upscale the final LR feature maps into the HR output. By doing so, we effectively replace the
+handcrafted bicubic filter in the SR pipeline with more complex upscaling filters specifically trained for each feature map, whilst also reducing the
+computational complexity of the overall SR operation. We evaluate the proposed approach using images and videos from publicly available datasets and
+show that it performs significantly better (+0.15dB on Images and +0.39dB on Videos) and is an order of magnitude faster than previous CNN-based
+methods.
 
 ## Download weights
 
@@ -88,7 +86,7 @@ Modify the contents of the file as follows.
 
 - line 24: `upscale_factor` change to the magnification you need to enlarge.
 - line 25: `mode` change Set to valid mode.
-- line 80: `model_path` change weight address after training.
+- line 76: `model_path` change weight address after training.
 
 ## Train
 
@@ -99,10 +97,10 @@ Modify the contents of the file as follows.
 
 If you want to load weights that you've trained before, modify the contents of the file as follows.
 
-- line 46: `resume` change to `True`.
-- line 47: `strict` Transfer learning is set to `False`, incremental learning is set to `True`.
-- line 48: `start_epoch` change number of training iterations in the previous round.
-- line 49: `resume_weight` the weight address that needs to be loaded.
+- line 47: `resume` change to `True`.
+- line 48: `strict` Transfer learning is set to `False`, incremental learning is set to `True`.
+- line 49: `start_epoch` change number of training iterations in the previous round.
+- line 50: `resume_weight` the weight address that needs to be loaded.
 
 ## Result
 
@@ -112,8 +110,8 @@ In the following table, the value in `()` indicates the result of the project, a
 
 | Dataset | Scale |       PSNR       |
 | :-----: | :---: | :--------------: |
-|  Set5   |   3   | 32.55(**32.31**) |
-|  Set14  |   3   | 29.14(**28.78**) |
+|  Set5   |   3   | 32.55(**32.59**) |
+|  Set14  |   3   | 29.08(**28.86**) |
 
 Low Resolution / Super Resolution / High Resolution
 <span align="center"><img src="assets/result.png"/></span>
@@ -121,22 +119,21 @@ Low Resolution / Super Resolution / High Resolution
 ### Credit
 
 #### Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network
+
 _Wenzhe Shi, Jose Caballero, Ferenc Huszár, Johannes Totz, Andrew P. Aitken, Rob Bishop, Daniel Rueckert, Zehan Wang_ <br>
 
 **Abstract** <br>
-Recently, several models based on deep neural networks have achieved great success in terms of both reconstruction 
-accuracy and computational performance for single image super-resolution. In these methods, the low resolution (LR) 
-input image is upscaled to the high resolution (HR) space using a single filter, commonly bicubic interpolation, 
-before reconstruction. This means that the super-resolution (SR) operation is performed in HR space. We demonstrate 
-that this is sub-optimal and adds computational complexity. In this paper, we present the first convolutional neural 
-network (CNN) capable of real-time SR of 1080p videos on a single K2 GPU. To achieve this, we propose a novel CNN 
-architecture where the feature maps are extracted in the LR space. In addition, we introduce an efficient 
-sub-pixel convolution layer which learns an array of upscaling filters to upscale the final LR feature maps into 
-the HR output. By doing so, we effectively replace the handcrafted bicubic filter in the SR pipeline with more 
-complex upscaling filters specifically trained for each feature map, whilst also reducing the computational complexity 
-of the overall SR operation. We evaluate the proposed approach using images and videos from publicly available datasets 
-and show that it performs significantly better (+0.15dB on Images and +0.39dB on Videos) and is an order of magnitude 
-faster than previous CNN-based methods.
+Recently, several models based on deep neural networks have achieved great success in terms of both reconstruction accuracy and computational
+performance for single image super-resolution. In these methods, the low resolution (LR)
+input image is upscaled to the high resolution (HR) space using a single filter, commonly bicubic interpolation, before reconstruction. This means
+that the super-resolution (SR) operation is performed in HR space. We demonstrate that this is sub-optimal and adds computational complexity. In this
+paper, we present the first convolutional neural network (CNN) capable of real-time SR of 1080p videos on a single K2 GPU. To achieve this, we propose
+a novel CNN architecture where the feature maps are extracted in the LR space. In addition, we introduce an efficient sub-pixel convolution layer
+which learns an array of upscaling filters to upscale the final LR feature maps into the HR output. By doing so, we effectively replace the
+handcrafted bicubic filter in the SR pipeline with more complex upscaling filters specifically trained for each feature map, whilst also reducing the
+computational complexity of the overall SR operation. We evaluate the proposed approach using images and videos from publicly available datasets and
+show that it performs significantly better (+0.15dB on Images and +0.39dB on Videos) and is an order of magnitude faster than previous CNN-based
+methods.
 
 [[Paper]](https://arxiv.org/pdf/1609.05158)
 

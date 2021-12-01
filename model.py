@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+from math import sqrt
+
 import torch
 from torch import nn
 
@@ -37,8 +39,10 @@ class ESPCN(nn.Module):
         self.sub_pixel = nn.Sequential(
             nn.Conv2d(32, 1 * (upscale_factor ** 2), (3, 3), (1, 1), (1, 1)),
             nn.PixelShuffle(upscale_factor),
-            nn.Sigmoid(),
         )
+
+        # Initial model weights
+        self._initialize_weights()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self._forward_impl(x)
@@ -49,3 +53,13 @@ class ESPCN(nn.Module):
         out = self.sub_pixel(out)
 
         return out
+
+    def _initialize_weights(self):
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d):
+                if module.in_channels == 32:
+                    nn.init.normal_(module.weight.data, 0.0, 0.001)
+                    nn.init.zeros_(module.bias.data)
+                else:
+                    nn.init.normal_(module.weight.data, 0.0, sqrt(2 / (module.out_channels * module.weight.data[0][0].numel())))
+                    nn.init.zeros_(module.bias.data)

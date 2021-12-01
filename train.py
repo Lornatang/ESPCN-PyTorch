@@ -13,6 +13,7 @@
 # ============================================================================
 """File description: Realize the model training function."""
 import os
+import time
 
 import torch
 from torch import nn
@@ -27,123 +28,7 @@ from dataset import ImageDataset
 from model import ESPCN
 
 
-def load_dataset() -> [DataLoader, DataLoader]:
-    train_datasets = ImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "train")
-    valid_datasets = ImageDataset(config.valid_image_dir, config.image_size, config.upscale_factor, "valid")
-    train_dataloader = DataLoader(train_datasets, batch_size=config.batch_size, shuffle=True, pin_memory=True)
-    valid_dataloader = DataLoader(valid_datasets, batch_size=config.batch_size, shuffle=False, pin_memory=True)
-
-    return train_dataloader, valid_dataloader
-
-
-def build_model() -> nn.Module:
-    model = ESPCN(config.upscale_factor).to(config.device)
-
-    return model
-
-
-def define_loss() -> nn.MSELoss:
-    criterion = nn.MSELoss().to(config.device)
-
-    return criterion
-
-
-def define_optimizer(model) -> optim:
-    if config.model_optimizer_name == "sgd":
-        optimizer = optim.SGD([{"params": model.feature_maps.parameters()},
-                               {"params": model.sub_pixel.parameters(), "lr": config.model_lr * 0.1}],
-                              lr=config.model_lr,
-                              momentum=config.model_momentum,
-                              weight_decay=config.model_weight_decay,
-                              nesterov=config.model_nesterov)
-    else:
-        optimizer = optim.Adam([{"params": model.feature_maps.parameters()},
-                                {"params": model.sub_pixel.parameters(), "lr": config.model_lr * 0.1}],
-                               lr=config.model_lr,
-                               betas=config.model_betas)
-
-    return optimizer
-
-
-def define_scheduler(optimizer) -> lr_scheduler:
-    if config.model_optimizer_name == "multiStepLR":
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
-    else:
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
-
-    return scheduler
-
-
-def resume_checkpoint(model):
-    if config.resume:
-        if config.resume_weight != "":
-            model.load_state_dict(torch.load(config.resume_weight), strict=config.strict)
-
-
-def train(model, train_dataloader, criterion, optimizer, scheduler, epoch, scaler, writer) -> None:
-    # Calculate how many iterations there are under epoch
-    batches = len(train_dataloader)
-    # Put the generator in training mode
-    model.train()
-
-    for index, (lr, hr) in enumerate(train_dataloader):
-        lr = lr.to(config.device, non_blocking=True)
-        hr = hr.to(config.device, non_blocking=True)
-
-        # Initialize the generator gradient
-        model.zero_grad()
-
-        # Mixed precision training + gradient cropping
-        with amp.autocast():
-            sr = model(lr)
-            loss = criterion(sr, hr)
-        # Gradient zoom
-        scaler.scale(loss).backward()
-        # Gradient clipping
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        # Update generator weight
-        scaler.step(optimizer)
-        scaler.update()
-
-        # In this Epoch, every one hundred iterations and the last iteration print the loss function
-        # and write it to Tensorboard at the same time
-        if (index + 1) % 100 == 0 or (index + 1) == batches:
-            iters = index + epoch * batches + 1
-            writer.add_scalar("Train/MSE_Loss", loss.item(), iters)
-            print(f"Epoch[{epoch + 1:05d}/{config.epochs:05d}]({index + 1:05d}/{batches:05d}) MSE loss: {loss.item():.6f}.")
-
-    # Update lr
-    scheduler.step()
-
-
-def validate(model, valid_dataloader, criterion, epoch, writer) -> float:
-    # Calculate how many iterations there are under Epoch.
-    batches = len(valid_dataloader)
-    # Put the generator in verification mode.
-    model.eval()
-    # Initialize the evaluation index.
-    total_psnr = 0.0
-
-    with torch.no_grad():
-        for index, (lr, hr) in enumerate(valid_dataloader):
-            lr = lr.to(config.device, non_blocking=True)
-            hr = hr.to(config.device, non_blocking=True)
-            # Calculate the PSNR evaluation index.
-            sr = model(lr).clamp_(0.0, 1.0)
-            psnr = 10 * torch.log10(1 / criterion(sr, hr)).item()
-            total_psnr += psnr
-
-        avg_psnr = total_psnr / batches
-        # Write the value of each round of verification indicators into Tensorboard.
-        writer.add_scalar("Valid/PSNR", avg_psnr, epoch + 1)
-        # Print evaluation indicators.
-        print(f"Epoch[{epoch + 1:04d}] avg PSNR: {avg_psnr:.2f}.\n")
-
-    return avg_psnr
-
-
-def main() -> None:
+def main():
     # Create a folder of super-resolution experiment results
     samples_dir = os.path.join("samples", config.exp_name)
     results_dir = os.path.join("results", config.exp_name)
@@ -173,7 +58,7 @@ def main() -> None:
 
     print("Define all scheduler functions...")
     scheduler = define_scheduler(optimizer)
-    print("Define all scheduler functions successfully.")
+    print("Define all optimizer scheduler successfully.")
 
     print("Check whether the training weight is restored...")
     resume_checkpoint(model)
@@ -185,9 +70,11 @@ def main() -> None:
     # Initialize training to generate network evaluation indicators
     best_psnr = 0.0
 
-    print("Start train ESPCN model.")
+    print("Start train model.")
     for epoch in range(config.start_epoch, config.epochs):
-        train(model, train_dataloader, criterion, optimizer, scheduler, epoch, scaler, writer)
+        train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer)
+        # Update lr
+        scheduler.step()
 
         psnr = validate(model, valid_dataloader, criterion, epoch, writer)
         # Automatically save the model with the highest index
@@ -199,7 +86,202 @@ def main() -> None:
 
     # Save the generator weight under the last Epoch in this stage
     torch.save(model.state_dict(), os.path.join(results_dir, "last.pth"))
-    print("End train ESPCN model.")
+    print("End train model.")
+
+
+def load_dataset() -> [DataLoader, DataLoader]:
+    train_datasets = ImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "train")
+    valid_datasets = ImageDataset(config.valid_image_dir, config.image_size, config.upscale_factor, "valid")
+    train_dataloader = DataLoader(train_datasets,
+                                  batch_size=config.batch_size,
+                                  shuffle=True,
+                                  num_workers=config.num_workers,
+                                  pin_memory=True,
+                                  persistent_workers=True)
+    valid_dataloader = DataLoader(valid_datasets,
+                                  batch_size=config.batch_size,
+                                  shuffle=False,
+                                  num_workers=config.num_workers,
+                                  pin_memory=True,
+                                  persistent_workers=True)
+
+    return train_dataloader, valid_dataloader
+
+
+def build_model() -> nn.Module:
+    model = ESPCN(config.upscale_factor).to(config.device)
+
+    return model
+
+
+def define_loss() -> nn.MSELoss:
+    criterion = nn.MSELoss().to(config.device)
+
+    return criterion
+
+
+def define_optimizer(model) -> optim:
+    if config.model_optimizer_name == "adam":
+        optimizer = optim.Adam([{"params": model.feature_maps.parameters()},
+                                {"params": model.sub_pixel.parameters(),
+                                 "lr": config.model_lr * 0.1}],
+                               config.model_lr, config.model_betas)
+    else:
+        optimizer = optim.SGD([{"params": model.feature_maps.parameters()},
+                               {"params": model.sub_pixel.parameters(),
+                                "lr": config.model_lr * 0.1}],
+                              config.model_lr, config.model_momentum, weight_decay=config.model_weight_decay,
+                              nesterov=config.model_nesterov)
+
+    return optimizer
+
+
+def define_scheduler(optimizer) -> lr_scheduler:
+    if config.model_optimizer_name == "multiStepLR":
+        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
+    else:
+        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
+
+    return scheduler
+
+
+def resume_checkpoint(model):
+    if config.resume:
+        if config.resume_weight != "":
+            model.load_state_dict(torch.load(config.resume_weight), strict=config.strict)
+
+
+def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) -> None:
+    # Calculate how many iterations there are under epoch
+    batches = len(train_dataloader)
+
+    batch_time = AverageMeter("Time", ":6.3f")
+    data_time = AverageMeter("Data", ":6.3f")
+    losses = AverageMeter("Loss", ":6.6f")
+    psnres = AverageMeter("PSNR", ":4.2f")
+    progress = ProgressMeter(batches, [batch_time, data_time, losses, psnres], prefix=f"Epoch: [{epoch + 1}]")
+
+    # Put the generator in training mode
+    model.train()
+
+    end = time.time()
+    for index, (lr, hr) in enumerate(train_dataloader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        lr = lr.to(config.device, non_blocking=True)
+        hr = hr.to(config.device, non_blocking=True)
+
+        # Initialize the generator gradient
+        model.zero_grad()
+
+        # Mixed precision training
+        with amp.autocast():
+            sr = model(lr)
+            loss = criterion(sr, hr)
+        # Gradient zoom
+        scaler.scale(loss).backward()
+        # Update generator weight
+        scaler.step(optimizer)
+        scaler.update()
+
+        # measure accuracy and record loss
+        psnr = 10. * torch.log10(1. / torch.mean((sr - hr) ** 2))
+        losses.update(loss.item(), lr.size(0))
+        psnres.update(psnr.item(), lr.size(0))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if index % config.print_frequency == 0:
+            progress.display(index)
+
+        # In this Epoch, every one hundred iterations and the last iteration print the loss function
+        # and write it to Tensorboard at the same time
+        if (index + 1) % 100 == 0 or (index + 1) == batches:
+            writer.add_scalar("Train/Loss", loss.item(), index + epoch * batches + 1)
+
+
+def validate(model, valid_dataloader, criterion, epoch, writer) -> float:
+    batch_time = AverageMeter("Time", ":6.3f")
+    losses = AverageMeter("Loss", ":6.6f")
+    psnres = AverageMeter("PSNR", ":4.2f")
+    progress = ProgressMeter(len(valid_dataloader), [batch_time, losses, psnres], prefix="Valid: ")
+
+    # Put the generator in verification mode.
+    model.eval()
+
+    with torch.no_grad():
+        end = time.time()
+        for index, (lr, hr) in enumerate(valid_dataloader):
+            lr = lr.to(config.device, non_blocking=True)
+            hr = hr.to(config.device, non_blocking=True)
+
+            # Mixed precision
+            with amp.autocast():
+                sr = model(lr)
+                loss = criterion(sr, hr)
+
+            # measure accuracy and record loss
+            psnr = 10. * torch.log10(1. / torch.mean((sr - hr) ** 2))
+            losses.update(loss.item(), lr.size(0))
+            psnres.update(psnr.item(), lr.size(0))
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if index % config.print_frequency == 0:
+                progress.display(index)
+
+        writer.add_scalar("Valid/PSNR", psnres.avg, epoch + 1)
+        # Print evaluation indicators.
+        print(f"* PSNR: {psnres.avg:4.2f}.\n")
+
+    return psnres.avg
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self, name, fmt=':f'):
+        self.name = name
+        self.fmt = fmt
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+    def __str__(self):
+        fmtstr = '{name} {val' + self.fmt + '} ({avg' + self.fmt + '})'
+        return fmtstr.format(**self.__dict__)
+
+
+class ProgressMeter(object):
+    def __init__(self, num_batches, meters, prefix=""):
+        self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
+        self.meters = meters
+        self.prefix = prefix
+
+    def display(self, batch):
+        entries = [self.prefix + self.batch_fmtstr.format(batch)]
+        entries += [str(meter) for meter in self.meters]
+        print('\t'.join(entries))
+
+    def _get_batch_fmtstr(self, num_batches):
+        num_digits = len(str(num_batches // 1))
+        fmt = '{:' + str(num_digits) + 'd}'
+        return '[' + fmt + '/' + fmt.format(num_batches) + ']'
 
 
 if __name__ == "__main__":

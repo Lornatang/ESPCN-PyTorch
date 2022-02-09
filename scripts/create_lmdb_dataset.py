@@ -20,7 +20,7 @@ import lmdb
 from tqdm import tqdm
 
 
-def main():
+def main(args) -> None:
     if os.path.exists(args.lmdb_path):
         shutil.rmtree(args.lmdb_path)
 
@@ -75,9 +75,9 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create LMDB database scripts.")
-    parser.add_argument("--images_dir", type=str, default="T91/train", help="Path to image directory. (Default: ``T91/train``)")
-    parser.add_argument("--lmdb_path", type=str, default="train_lmdb/ESPCN/T91_HR_lmdb", help="Path to lmdb database. (Default: ``train_lmdb/ESPCN/TG191_HR_lmdb``)")
-    parser.add_argument("--upscale_factor", type=int, default=1, help="Image zoom factor. (Default: 1)")
+    parser.add_argument("--images_dir", type=str, help="Path to image directory.")
+    parser.add_argument("--lmdb_path", type=str, help="Path to lmdb database.")
+    parser.add_argument("--upscale_factor", type=int, help="Image zoom factor.")
     args = parser.parse_args()
 
-    main()
+    main(args)

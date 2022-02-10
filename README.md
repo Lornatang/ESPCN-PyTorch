@@ -49,7 +49,7 @@ methods.
 
 - Image format
     - [Google Driver](https://drive.google.com/drive/folders/1PYizfnKq-UtRCDoSy79PGA4FC5HqAqch?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1M0u-BPTdokxO452j7vxW4Q) access: `llot`
+    - [Baidu Driver](https://pan.baidu.com/s/12Rp3-zcimw4605grhKtESg?pwd=llot)
 
 ### Download valid dataset
 

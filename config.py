@@ -13,33 +13,30 @@
 # ==============================================================================
 """Realize the parameter configuration function of dataset, model, training and verification code."""
 import torch
-from torch.backends import cudnn as cudnn
+from torch.backends import cudnn
 
 # ==============================================================================
 # General configuration
 # ==============================================================================
+# Random seed to maintain reproducible results
 torch.manual_seed(0)
+# Use GPU for training by default
 device = torch.device("cuda", 0)
+# Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
-upscale_factor = 3
+# Image magnification factor
+upscale_factor = 2
+# Current configuration parameter method
 mode = "train"
-exp_name = "baseline"
+# Experiment name, easy to save weights and log files
+exp_name = "espcn_x2"
 
-# ==============================================================================
-# Training configuration
-# ==============================================================================
 if mode == "train":
     # Dataset
-    # Image format
     train_image_dir = f"data/T91/ESPCN/train"
     valid_image_dir = f"data/T91/ESPCN/valid"
-    # LMDB format
-    train_lr_lmdb_path = f"data/train_lmdb/ESPCN/T91_LRbicx3_lmdb"
-    train_hr_lmdb_path = f"data/train_lmdb/ESPCN/T91_HR_lmdb"
-    valid_lr_lmdb_path = f"data/valid_lmdb/ESPCN/T91_LRbicx3_lmdb"
-    valid_hr_lmdb_path = f"data/valid_lmdb/ESPCN/T91_HR_lmdb"
 
-    image_size = 51
+    image_size = int(upscale_factor * 17)
     batch_size = 16
     num_workers = 4
 
@@ -50,23 +47,18 @@ if mode == "train":
     resume_weight = ""
 
     # Total num epochs
-    epochs = 2000
+    epochs = 2583
 
-    # Adam optimizer parameter
-    model_optimizer_name = "adam"
+    # SGD optimizer parameter
     model_lr = 1e-2
     model_betas = (0.9, 0.999)
 
     # Optimizer scheduler parameter
-    lr_scheduler_name = "multiStepLR"
-    lr_scheduler_milestones = [1600, 1800]
+    lr_scheduler_milestones = [int(epochs * 0.1), int(epochs * 0.8)]
     lr_scheduler_gamma = 0.1
 
-    print_frequency = 100
+    print_frequency = 50
 
-# ==============================================================================
-# Verify configuration
-# ==============================================================================
 if mode == "valid":
     # Test data address
     lr_dir = f"data/Set5/LRbicx{upscale_factor}"

@@ -73,8 +73,6 @@ def main():
     print("Start train model.")
     for epoch in range(config.start_epoch, config.epochs):
         train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer)
-        # Update lr
-        scheduler.step()
 
         psnr = validate(model, valid_dataloader, criterion, epoch, writer)
         # Automatically save the model with the highest index
@@ -83,6 +81,9 @@ def main():
         torch.save(model.state_dict(), os.path.join(samples_dir, f"epoch_{epoch + 1}.pth"))
         if is_best:
             torch.save(model.state_dict(), os.path.join(results_dir, "best.pth"))
+
+        # Update lr
+        scheduler.step()
 
     # Save the generator weight under the last Epoch in this stage
     torch.save(model.state_dict(), os.path.join(results_dir, "last.pth"))
@@ -120,27 +121,18 @@ def define_loss() -> nn.MSELoss:
     return criterion
 
 
-def define_optimizer(model) -> optim:
-    if config.model_optimizer_name == "adam":
-        optimizer = optim.Adam([{"params": model.feature_maps.parameters()},
-                                {"params": model.sub_pixel.parameters(),
-                                 "lr": config.model_lr * 0.1}],
-                               config.model_lr, config.model_betas)
-    else:
-        optimizer = optim.SGD([{"params": model.feature_maps.parameters()},
-                               {"params": model.sub_pixel.parameters(),
-                                "lr": config.model_lr * 0.1}],
-                              config.model_lr, config.model_momentum, weight_decay=config.model_weight_decay,
-                              nesterov=config.model_nesterov)
+def define_optimizer(model) -> optim.Adam:
+    optimizer = optim.Adam([{"params": model.feature_maps.parameters()},
+                            {"params": model.sub_pixel.parameters(),
+                             "lr": config.model_lr * 0.1}],
+                           lr=config.model_lr,
+                           betas=config.model_betas)
 
     return optimizer
 
 
-def define_scheduler(optimizer) -> lr_scheduler:
-    if config.model_optimizer_name == "multiStepLR":
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
-    else:
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
+def define_scheduler(optimizer) -> lr_scheduler.MultiStepLR:
+    scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=config.lr_scheduler_milestones, gamma=config.lr_scheduler_gamma)
 
     return scheduler
 
@@ -148,7 +140,13 @@ def define_scheduler(optimizer) -> lr_scheduler:
 def resume_checkpoint(model):
     if config.resume:
         if config.resume_weight != "":
-            model.load_state_dict(torch.load(config.resume_weight), strict=config.strict)
+            # Get pretrained model state dict
+            pretrained_state_dict = torch.load(config.resume_weight)
+            # Extract the fitted model weights
+            new_state_dict = {k: v for k, v in pretrained_state_dict.items() if k in model.state_dict().items()}
+            # Overwrite the pretrained model weights to the current model
+            model.state_dict().update(new_state_dict)
+            model.load_state_dict(model.state_dict(), strict=config.strict)
 
 
 def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) -> None:
@@ -194,13 +192,10 @@ def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) 
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if index % config.print_frequency == 0:
+        # Writer Loss to file
+        writer.add_scalar("Train/Loss", loss.item(), index + epoch * batches + 1)
+        if index % config.print_frequency == 0 and index != 0:
             progress.display(index)
-
-        # In this Epoch, every one hundred iterations and the last iteration print the loss function
-        # and write it to Tensorboard at the same time
-        if (index + 1) % 100 == 0 or (index + 1) == batches:
-            writer.add_scalar("Train/Loss", loss.item(), index + epoch * batches + 1)
 
 
 def validate(model, valid_dataloader, criterion, epoch, writer) -> float:

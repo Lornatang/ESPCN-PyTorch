@@ -8,16 +8,7 @@
 
 - Image format
     - [Google Driver](https://drive.google.com/drive/folders/1PYizfnKq-UtRCDoSy79PGA4FC5HqAqch?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1M0u-BPTdokxO452j7vxW4Q) access: `llot`
-
-- LMDB format (train)
-    - [Google Driver](https://drive.google.com/drive/folders/1BPqN08QHk_xFnMJWMS8grfh_vesVs8Jf?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1eqeORnKcTmGatx2kAG92-A) access: `llot`
-
-- LMDB format (valid)
-    - [Google Driver](https://drive.google.com/drive/folders/1bYqqKk6NJ9wUfxTH2t_LbdMTB04OUicc?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1W34MeEtLY0m-bOrnaveVmw) access: `llot`
-
+    
 ### Download valid dataset
 
 #### Set5
@@ -46,30 +37,7 @@
 - T91
     - ESPCN
         - train
-            - ...
         - valid
-            - ...
-```
-
-### LMDB format
-
-```text
-- train_lmdb
-    - ESPCN
-      - T91_LRbicx3_lmdb
-          - data.mdb
-          - lock.mdb
-      - T91_HR_lmdb
-          - data.mdb
-          - lock.mdb
-- valid_lmdb
-    - ESPCN
-      - T91_LRbicx3_lmdb
-          - data.mdb
-          - lock.mdb
-      - T91_HR_lmdb
-          - data.mdb
-          - lock.mdb
 ```
 
 ## Test dataset struct information

@@ -2,8 +2,7 @@
 
 ## Overview
 
-This repository contains an op-for-op PyTorch reimplementation
-of [Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network](https://arxiv.org/abs/1609.05158v2).
+This repository contains an op-for-op PyTorch reimplementation of [Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network](https://arxiv.org/abs/1609.05158v2).
 
 ## Table of contents
 
@@ -39,8 +38,8 @@ methods.
 
 ## Download weights
 
-- [Google Driver](https://drive.google.com/drive/folders/1uinHAlm5UrWOrUQdGl5tj682u0WaNuVO?usp=sharing)
-- [Baidu Driver](https://pan.baidu.com/s/1V4g2o-fcLjLgME_B_66dmQ) access:`llot`
+- [Google Driver](https://drive.google.com/drive/folders/1WZN2bO7SN7bkcQH65VYznQR90LDhiNBd?usp=sharing)
+- [Baidu Driver](https://pan.baidu.com/s/1yNs4rqIb004-NKEdKBJtYg?pwd=llot)
 
 ## Download datasets
 
@@ -51,14 +50,6 @@ methods.
 - Image format
     - [Google Driver](https://drive.google.com/drive/folders/1PYizfnKq-UtRCDoSy79PGA4FC5HqAqch?usp=sharing)
     - [Baidu Driver](https://pan.baidu.com/s/1M0u-BPTdokxO452j7vxW4Q) access: `llot`
-
-- LMDB format (train)
-    - [Google Driver](https://drive.google.com/drive/folders/1BPqN08QHk_xFnMJWMS8grfh_vesVs8Jf?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1eqeORnKcTmGatx2kAG92-A) access: `llot`
-
-- LMDB format (valid)
-    - [Google Driver](https://drive.google.com/drive/folders/1bYqqKk6NJ9wUfxTH2t_LbdMTB04OUicc?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1W34MeEtLY0m-bOrnaveVmw) access: `llot`
 
 ### Download valid dataset
 
@@ -84,23 +75,23 @@ methods.
 
 Modify the contents of the file as follows.
 
-- line 24: `upscale_factor` change to the magnification you need to enlarge.
-- line 25: `mode` change Set to valid mode.
-- line 76: `model_path` change weight address after training.
+- line 28: `upscale_factor` change to the magnification you need to enlarge.
+- line 30: `mode` change Set to valid mode.
+- line 68: `model_path` change weight address after training.
 
 ## Train
 
 Modify the contents of the file as follows.
 
-- line 24: `upscale_factor` change to the magnification you need to enlarge.
-- line 25: `mode` change Set to train mode.
+- line 28: `upscale_factor` change to the magnification you need to enlarge.
+- line 30: `mode` change Set to train mode.
 
 If you want to load weights that you've trained before, modify the contents of the file as follows.
 
-- line 47: `resume` change to `True`.
-- line 48: `strict` Transfer learning is set to `False`, incremental learning is set to `True`.
-- line 49: `start_epoch` change number of training iterations in the previous round.
-- line 50: `resume_weight` the weight address that needs to be loaded.
+- line 44: `resume` change to `True`.
+- line 45: `strict` Transfer learning is set to `False`, incremental learning is set to `True`.
+- line 46: `start_epoch` change number of training iterations in the previous round.
+- line 47: `resume_weight` the weight address that needs to be loaded.
 
 ## Result
 
@@ -109,9 +100,10 @@ Source of original paper results: https://arxiv.org/pdf/1609.05158v2.pdf
 In the following table, the value in `()` indicates the result of the project, and `-` indicates no test.
 
 | Dataset | Scale |       PSNR       |
-| :-----: | :---: | :--------------: |
-|  Set5   |   3   | 32.55(**32.59**) |
-|  Set14  |   3   | 29.08(**28.86**) |
+|:-------:|:-----:|:----------------:|
+|  Set5   |   2   |   -(**36.62**)   |
+|  Set5   |   3   | 32.55(**32.56**) |
+|  Set5   |   4   |   -(**30.25**)   |
 
 Low Resolution / Super Resolution / High Resolution
 <span align="center"><img src="assets/result.png"/></span>

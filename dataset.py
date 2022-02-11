@@ -12,10 +12,8 @@
 # limitations under the License.
 # ==============================================================================
 """Realize the function of dataset preparation."""
-import io
 import os
 
-import lmdb
 import numpy as np
 from PIL import Image
 from torch import Tensor

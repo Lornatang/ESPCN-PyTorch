@@ -29,17 +29,6 @@ from model import ESPCN
 
 
 def main():
-    # Create a folder of super-resolution experiment results
-    samples_dir = os.path.join("samples", config.exp_name)
-    results_dir = os.path.join("results", config.exp_name)
-    if not os.path.exists(samples_dir):
-        os.makedirs(samples_dir)
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
-
-    # Create training process log file
-    writer = SummaryWriter(os.path.join("samples", "logs", config.exp_name))
-
     print("Load train dataset and valid dataset...")
     train_dataloader, valid_dataloader = load_dataset()
     print("Load train dataset and valid dataset successfully.")
@@ -49,7 +38,7 @@ def main():
     print("Build SR model successfully.")
 
     print("Define all loss functions...")
-    criterion = define_loss()
+    psnr_criterion, pixel_criterion = define_loss()
     print("Define all loss functions successfully.")
 
     print("Define all optimizer functions...")
@@ -64,6 +53,17 @@ def main():
     resume_checkpoint(model)
     print("Check whether the training weight is restored successfully.")
 
+    # Create a folder of super-resolution experiment results
+    samples_dir = os.path.join("samples", config.exp_name)
+    results_dir = os.path.join("results", config.exp_name)
+    if not os.path.exists(samples_dir):
+        os.makedirs(samples_dir)
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+
+    # Create training process log file
+    writer = SummaryWriter(os.path.join("samples", "logs", config.exp_name))
+
     # Initialize the gradient scaler
     scaler = amp.GradScaler()
 
@@ -72,9 +72,9 @@ def main():
 
     print("Start train model.")
     for epoch in range(config.start_epoch, config.epochs):
-        train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer)
+        train(model, train_dataloader, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer)
 
-        psnr = validate(model, valid_dataloader, criterion, epoch, writer)
+        psnr = validate(model, valid_dataloader, psnr_criterion, epoch, writer)
         # Automatically save the model with the highest index
         is_best = psnr > best_psnr
         best_psnr = max(psnr, best_psnr)
@@ -115,10 +115,11 @@ def build_model() -> nn.Module:
     return model
 
 
-def define_loss() -> nn.MSELoss:
-    criterion = nn.MSELoss().to(config.device)
+def define_loss() -> [nn.MSELoss, nn.MSELoss]:
+    psnr_criterion = nn.MSELoss().to(config.device)
+    pixel_criterion = nn.MSELoss().to(config.device)
 
-    return criterion
+    return psnr_criterion, pixel_criterion
 
 
 def define_optimizer(model) -> optim.Adam:
@@ -137,19 +138,20 @@ def define_scheduler(optimizer) -> lr_scheduler.MultiStepLR:
     return scheduler
 
 
-def resume_checkpoint(model):
+def resume_checkpoint(model) -> None:
     if config.resume:
         if config.resume_weight != "":
             # Get pretrained model state dict
             pretrained_state_dict = torch.load(config.resume_weight)
+            model_state_dict = model.state_dict()
             # Extract the fitted model weights
-            new_state_dict = {k: v for k, v in pretrained_state_dict.items() if k in model.state_dict().items()}
+            new_state_dict = {k: v for k, v in pretrained_state_dict.items() if k in model_state_dict.items()}
             # Overwrite the pretrained model weights to the current model
-            model.state_dict().update(new_state_dict)
-            model.load_state_dict(model.state_dict(), strict=config.strict)
+            model_state_dict.update(new_state_dict)
+            model.load_state_dict(model_state_dict, strict=config.strict)
 
 
-def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) -> None:
+def train(model, train_dataloader, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer) -> None:
     # Calculate how many iterations there are under epoch
     batches = len(train_dataloader)
 
@@ -176,7 +178,8 @@ def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) 
         # Mixed precision training
         with amp.autocast():
             sr = model(lr)
-            loss = criterion(sr, hr)
+            loss = pixel_criterion(sr, hr)
+
         # Gradient zoom
         scaler.scale(loss).backward()
         # Update generator weight
@@ -184,7 +187,7 @@ def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) 
         scaler.update()
 
         # measure accuracy and record loss
-        psnr = 10. * torch.log10(1. / torch.mean((sr - hr) ** 2))
+        psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
         losses.update(loss.item(), lr.size(0))
         psnres.update(psnr.item(), lr.size(0))
 
@@ -198,11 +201,10 @@ def train(model, train_dataloader, criterion, optimizer, epoch, scaler, writer) 
             progress.display(index)
 
 
-def validate(model, valid_dataloader, criterion, epoch, writer) -> float:
+def validate(model, valid_dataloader, psnr_criterion, epoch, writer) -> float:
     batch_time = AverageMeter("Time", ":6.3f")
-    losses = AverageMeter("Loss", ":6.6f")
     psnres = AverageMeter("PSNR", ":4.2f")
-    progress = ProgressMeter(len(valid_dataloader), [batch_time, losses, psnres], prefix="Valid: ")
+    progress = ProgressMeter(len(valid_dataloader), [batch_time, psnres], prefix="Valid: ")
 
     # Put the generator in verification mode.
     model.eval()
@@ -216,12 +218,10 @@ def validate(model, valid_dataloader, criterion, epoch, writer) -> float:
             # Mixed precision
             with amp.autocast():
                 sr = model(lr)
-                loss = criterion(sr, hr)
 
             # measure accuracy and record loss
-            psnr = 10. * torch.log10(1. / torch.mean((sr - hr) ** 2))
-            losses.update(loss.item(), lr.size(0))
-            psnres.update(psnr.item(), lr.size(0))
+            psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
+            psnres.update(psnr.item(), hr.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -237,6 +237,7 @@ def validate(model, valid_dataloader, criterion, epoch, writer) -> float:
     return psnres.avg
 
 
+# Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class AverageMeter(object):
     """Computes and stores the average and current value"""
 

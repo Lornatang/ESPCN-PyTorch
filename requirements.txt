@@ -1,9 +1,7 @@
-Pillow
-tqdm
 opencv-python
-lmdb
+numpy
+tqdm
 torch
 setuptools
-numpy
 torchvision
 natsort

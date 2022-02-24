@@ -12,8 +12,6 @@ This repository contains an op-for-op PyTorch reimplementation of [Real-Time Sin
     - [About Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network](#about-real-time-single-image-and-video-super-resolution-using-an-efficient-sub-pixel-convolutional-neural-network)
     - [Download weights](#download-weights)
     - [Download datasets](#download-datasets)
-        - [Download train dataset](#download-train-dataset)
-        - [Download valid dataset](#download-valid-dataset)
     - [Test](#test)
     - [Train](#train)
     - [Result](#result)
@@ -43,55 +41,30 @@ methods.
 
 ## Download datasets
 
-### Download train dataset
+Contains DIV2K, DIV8K, Flickr2K, OST, T91, Set5, Set14, BSDS100 and BSDS200, etc.
 
-#### T91
-
-- Image format
-    - [Google Driver](https://drive.google.com/drive/folders/1PYizfnKq-UtRCDoSy79PGA4FC5HqAqch?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/12Rp3-zcimw4605grhKtESg?pwd=llot)
-
-### Download valid dataset
-
-#### Set5
-
-- Image format
-    - [Google Driver](https://drive.google.com/file/d/1GtQuoEN78q3AIP8vkh-17X90thYp_FfU/view?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1dlPcpwRPUBOnxlfW5--S5g) access:`llot`
-
-#### Set14
-
-- Image format
-    - [Google Driver](https://drive.google.com/file/d/1CzwwAtLSW9sog3acXj8s7Hg3S7kr2HiZ/view?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1KBS38UAjM7bJ_e6a54eHaA) access:`llot`
-
-#### BSD100
-
-- Image format
-    - [Google Driver](https://drive.google.com/file/d/1xkjWJGZgwWjDZZFN6KWlNMvHXmRORvdG/view?usp=sharing)
-    - [Baidu Driver](https://pan.baidu.com/s/1EBVulUpsQrDmZfqnm4jOZw) access:`llot`
+- [Google Driver](https://drive.google.com/drive/folders/1A6lzGeQrFMxPqJehK9s37ce-tPDj20mD?usp=sharing)
+- [Baidu Driver](https://pan.baidu.com/s/1o-8Ty_7q6DiS3ykLU09IVg?pwd=llot)
 
 ## Test
 
 Modify the contents of the file as follows.
 
-- line 28: `upscale_factor` change to the magnification you need to enlarge.
-- line 30: `mode` change Set to valid mode.
-- line 68: `model_path` change weight address after training.
+- line 30: `upscale_factor` change to the magnification you need to enlarge.
+- line 32: `mode` change Set to valid mode.
+- line 71: `model_path` change weight address after training.
 
 ## Train
 
 Modify the contents of the file as follows.
 
-- line 28: `upscale_factor` change to the magnification you need to enlarge.
-- line 30: `mode` change Set to train mode.
+- line 30: `upscale_factor` change to the magnification you need to enlarge.
+- line 32: `mode` change Set to valid mode.
 
 If you want to load weights that you've trained before, modify the contents of the file as follows.
 
-- line 44: `resume` change to `True`.
-- line 45: `strict` Transfer learning is set to `False`, incremental learning is set to `True`.
-- line 46: `start_epoch` change number of training iterations in the previous round.
-- line 47: `resume_weight` the weight address that needs to be loaded.
+- line 47: `start_epoch` change number of training iterations in the previous round.
+- line 48: `resume` change to `True`.
 
 ## Result
 
@@ -101,9 +74,9 @@ In the following table, the value in `()` indicates the result of the project, a
 
 | Dataset | Scale |       PSNR       |
 |:-------:|:-----:|:----------------:|
-|  Set5   |   2   |   -(**36.62**)   |
-|  Set5   |   3   | 32.55(**32.56**) |
-|  Set5   |   4   |   -(**30.25**)   |
+|  Set5   |   2   |   -(**36.59**)   |
+|  Set5   |   3   | 32.55(**32.50**) |
+|  Set5   |   4   |   -(**30.20**)   |
 
 Low Resolution / Super Resolution / High Resolution
 <span align="center"><img src="assets/result.png"/></span>

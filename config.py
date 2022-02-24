@@ -12,14 +12,16 @@
 # limitations under the License.
 # ==============================================================================
 """Realize the parameter configuration function of dataset, model, training and verification code."""
+import random
+
+import numpy as np
 import torch
 from torch.backends import cudnn
 
-# ==============================================================================
-# General configuration
-# ==============================================================================
 # Random seed to maintain reproducible results
+random.seed(0)
 torch.manual_seed(0)
+np.random.seed(0)
 # Use GPU for training by default
 device = torch.device("cuda", 0)
 # Turning on when the image size does not change during training can speed up training
@@ -35,23 +37,24 @@ if mode == "train":
     # Dataset
     train_image_dir = f"data/T91/ESPCN/train"
     valid_image_dir = f"data/T91/ESPCN/valid"
+    test_image_dir = "data/Set5/GTmod12"
 
     image_size = int(upscale_factor * 17)
     batch_size = 16
     num_workers = 4
 
     # Incremental training and migration training
-    resume = False
-    strict = True
     start_epoch = 0
-    resume_weight = ""
+    resume = ""
 
     # Total num epochs
-    epochs = 2583
+    epochs = 3000
 
     # SGD optimizer parameter
     model_lr = 1e-2
-    model_betas = (0.9, 0.999)
+    model_momentum = 0.9
+    model_weight_decay = 1e-4
+    model_nesterov = False
 
     # Optimizer scheduler parameter
     lr_scheduler_milestones = [int(epochs * 0.1), int(epochs * 0.8)]
@@ -65,4 +68,4 @@ if mode == "valid":
     sr_dir = f"results/test/{exp_name}"
     hr_dir = f"data/Set5/GTmod12"
 
-    model_path = f"results/{exp_name}/last.pth"
+    model_path = f"results/{exp_name}/best.pth.tar"

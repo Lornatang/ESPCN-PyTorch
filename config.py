@@ -36,8 +36,8 @@ if mode == "train":
     # Dataset
     train_image_dir = f"data/T91/ESPCN/train"
     valid_image_dir = f"data/T91/ESPCN/valid"
-    test_lr_image_dir = f"data/Set5/GTmod12"
-    test_hr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
+    test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
+    test_hr_image_dir = f"data/Set5/GTmod12"
 
     image_size = int(upscale_factor * 17)
     batch_size = 16

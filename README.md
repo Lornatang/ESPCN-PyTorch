@@ -50,21 +50,21 @@ Contains DIV2K, DIV8K, Flickr2K, OST, T91, Set5, Set14, BSDS100 and BSDS200, etc
 
 Modify the contents of the file as follows.
 
-- line 30: `upscale_factor` change to the magnification you need to enlarge.
-- line 32: `mode` change Set to valid mode.
+- line 29: `upscale_factor` change to the magnification you need to enlarge.
+- line 31: `mode` change Set to valid mode.
 - line 71: `model_path` change weight address after training.
 
 ## Train
 
 Modify the contents of the file as follows.
 
-- line 30: `upscale_factor` change to the magnification you need to enlarge.
-- line 32: `mode` change Set to valid mode.
+- line 29: `upscale_factor` change to the magnification you need to enlarge.
+- line 31: `mode` change Set to valid mode.
 
 If you want to load weights that you've trained before, modify the contents of the file as follows.
 
 - line 47: `start_epoch` change number of training iterations in the previous round.
-- line 48: `resume` change to `True`.
+- line 48: `resume` change weight address that needs to be loaded.
 
 ## Result
 

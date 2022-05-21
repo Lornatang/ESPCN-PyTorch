@@ -42,6 +42,7 @@ class QuantumFunction(Function):
     @staticmethod
     def backward(ctx, grad_output):
         batches, z_expectations = ctx.saved_tensors
+        device = batches.device
 
         batch_size = batches.size()[0]
         parameters = ctx.n_circuits * ctx.qubits
@@ -58,7 +59,7 @@ class QuantumFunction(Function):
             # Matrix to shift only the columns corresponding to current qubit
             shift_matrix = np.zeros(batches.size())
             shift_matrix[:, list(range(j, parameters, ctx.qubits))] = ctx.shift
-            shift_matrix = torch.tensor(shift_matrix)
+            shift_matrix = torch.tensor(shift_matrix).to(device)
 
             # Add shift to input tensor
             shift_right = batches + shift_matrix
@@ -96,7 +97,7 @@ class QuantumFunction(Function):
         expectations_right, expectations_left = results
 
         # This is our dy/dq
-        gradient = expectations_right - expectations_left / 2
+        gradient = (expectations_right - expectations_left) / 2
 
         # shape: (|Q|, 256, 10)
 
@@ -111,7 +112,7 @@ class QuantumFunction(Function):
         # shape: (|Q|, 256, 10)
 
         # Arrange gradients to match their corresponding qubit
-        out_tensor = batch_gradients.transpose(0, 1).flatten(1)
+        out_tensor = batch_gradients.transpose(0, 1).transpose(1, 2).reshape(batch_size, -1)
 
         # shape: (256, 10 * |Q|)
 

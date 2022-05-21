@@ -28,7 +28,8 @@ class QuantumCircuit:
         self.t_qc = transpile(self._circuit, self.backend)
 
     def run(self, experiments):
-        experiments = experiments.numpy()
+        device = experiments.device
+        experiments = experiments.cpu().detach().numpy()
 
         qobj = assemble(
             self.t_qc,
@@ -38,7 +39,8 @@ class QuantumCircuit:
         qobj.experiments = QuantumCircuit.get_experiments(qobj.experiments[0], experiments)
 
         job = self.backend.run(qobj)
-        counts = job.result().get_counts()
+        result = job.result()
+        counts = result.get_counts()
 
         expectations = []
         for exp in counts:
@@ -49,7 +51,7 @@ class QuantumCircuit:
                 val += sign * count
             expectations.append(val)
 
-        expectations = torch.tensor(expectations)
+        expectations = torch.tensor(expectations).to(device)
 
         return expectations / self.shots
 
@@ -61,10 +63,10 @@ class QuantumCircuit:
         first = next(i for i, ins in enumerate(qobj_exp.instructions) if ins.name == 'ry')
         for thetas in experiments:
             shallow = copy.copy(qobj_exp)
-            shallow.instructions = copy.copy(shallow.instructions)
+            shallow.instructions = shallow.instructions[:]
             for i, theta in enumerate(thetas):
                 shallow.instructions[first + i] = copy.copy(shallow.instructions[first + i])
-                shallow.instructions[first + i].params = copy.copy(shallow.instructions[first + i].params)
+                shallow.instructions[first + i].params = shallow.instructions[first + i].params[:]
                 shallow.instructions[first + i].params[0] = qiskit.circuit.ParameterExpression({}, theta)
             qobj_exps.append(shallow)
         return qobj_exps

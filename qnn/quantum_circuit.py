@@ -1,14 +1,18 @@
+import copy
 import qiskit
+import torch
 from qiskit import transpile, assemble
 
 
 class QuantumCircuit:
     def __init__(self, n_qubits, backend, shots):
-        # --- Circuit definition ---
-        self._circuit = qiskit.QuantumCircuit(n_qubits)
+        self.n_qubits = n_qubits
 
-        all_qubits = [i for i in range(n_qubits)]
-        self.thetas = qiskit.circuit.ParameterVector('thetas', n_qubits)
+        # --- Circuit definition ---
+        self._circuit = qiskit.QuantumCircuit(self.n_qubits)
+
+        all_qubits = [i for i in range(self.n_qubits)]
+        self.thetas = qiskit.circuit.ParameterVector('thetas', self.n_qubits)
 
         self._circuit.h(all_qubits)
         self._circuit.barrier()
@@ -22,25 +26,45 @@ class QuantumCircuit:
         self.shots = shots
         # Transpile & assemble circuit in advance to speed-up execution
         self.t_qc = transpile(self._circuit, self.backend)
-        self.qobj = assemble(
+
+    def run(self, experiments):
+        experiments = experiments.numpy()
+
+        qobj = assemble(
             self.t_qc,
             shots=self.shots,
             parameter_binds=[{theta: 0 for theta in self.thetas}]
         )
+        qobj.experiments = QuantumCircuit.get_experiments(qobj.experiments[0], experiments)
 
-    def run(self, thetas):
-        for i, theta in enumerate(thetas):
-            # Modify params directly into the instruction list to avoid re-assembling the circuit
-            # TODO: investigate if Qiskit has a method to do this on a qObj.
-            self.qobj.experiments[0].instructions[1 + len(thetas) + i].params[0] = qiskit.circuit.ParameterExpression({}, theta)
-
-        job = self.backend.run(self.qobj)
+        job = self.backend.run(qobj)
         counts = job.result().get_counts()
 
-        # Get pauli-Z expectation
-        val = 0.0
-        for bitstring, count in counts.items():
-            sign = (-1) ** bitstring.count("0")
-            val += sign * count
+        expectations = []
+        for exp in counts:
+            # Get pauli-Z expectation
+            val = 0.0
+            for bitstring, count in exp.items():
+                sign = (-1) ** bitstring.count("0")
+                val += sign * count
+            expectations.append(val)
 
-        return val / self.shots
+        expectations = torch.tensor(expectations)
+
+        return expectations / self.shots
+
+    @staticmethod
+    def get_experiments(qobj_exp, experiments):
+        # Modify params directly into the instruction list to avoid re-assembling the circuit
+        # TODO: investigate if Qiskit has a method to do this better.
+        qobj_exps = []
+        first = next(i for i, ins in enumerate(qobj_exp.instructions) if ins.name == 'ry')
+        for thetas in experiments:
+            shallow = copy.copy(qobj_exp)
+            shallow.instructions = copy.copy(shallow.instructions)
+            for i, theta in enumerate(thetas):
+                shallow.instructions[first + i] = copy.copy(shallow.instructions[first + i])
+                shallow.instructions[first + i].params = copy.copy(shallow.instructions[first + i].params)
+                shallow.instructions[first + i].params[0] = qiskit.circuit.ParameterExpression({}, theta)
+            qobj_exps.append(shallow)
+        return qobj_exps

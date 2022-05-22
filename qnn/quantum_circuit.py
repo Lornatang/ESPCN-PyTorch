@@ -3,7 +3,6 @@ import qiskit
 import torch
 from qiskit import transpile, assemble
 
-
 class QuantumCircuit:
     def __init__(self, n_qubits, backend, shots):
         self.n_qubits = n_qubits
@@ -11,15 +10,17 @@ class QuantumCircuit:
         # --- Circuit definition ---
         self._circuit = qiskit.QuantumCircuit(self.n_qubits)
 
-        all_qubits = [i for i in range(self.n_qubits)]
-        self.thetas = qiskit.circuit.ParameterVector('thetas', self.n_qubits)
+        self.inputs = qiskit.circuit.ParameterVector('x', self.n_qubits)
+        self.thetas = qiskit.circuit.ParameterVector('Θ', self.n_qubits)
 
-        self._circuit.h(all_qubits)
-        self._circuit.barrier()
-        for i, theta in enumerate(self.thetas):
-            self._circuit.ry(theta, i)
+        for i, [x, theta] in enumerate(zip(self.inputs, self.thetas)):
+            self._circuit.h(i)
+            self._circuit.ry(x, i)
+            self._circuit.barrier(i)
+            self._circuit.rx(theta, i)
 
         self._circuit.measure_all()
+        # self._circuit.draw(output='mpl', filename='circuit.png')
         # ---------------------------
 
         self.backend = backend
@@ -27,16 +28,17 @@ class QuantumCircuit:
         # Transpile & assemble circuit in advance to speed-up execution
         self.t_qc = transpile(self._circuit, self.backend)
 
-    def run(self, experiments):
+    def run(self, experiments, thetas):
         device = experiments.device
         experiments = experiments.cpu().detach().numpy()
+        thetas = thetas.cpu().detach().numpy()
 
         qobj = assemble(
             self.t_qc,
             shots=self.shots,
-            parameter_binds=[{theta: 0 for theta in self.thetas}]
+            parameter_binds=[{param: 0 for params in zip(self.inputs, self.thetas) for param in params}]
         )
-        qobj.experiments = QuantumCircuit.get_experiments(qobj.experiments[0], experiments)
+        qobj.experiments = QuantumCircuit.get_experiments(qobj.experiments[0], experiments, thetas)
 
         job = self.backend.run(qobj)
         result = job.result()
@@ -56,17 +58,22 @@ class QuantumCircuit:
         return expectations / self.shots
 
     @staticmethod
-    def get_experiments(qobj_exp, experiments):
+    def get_experiments(qobj_exp, experiments, exp_thetas):
         # Modify params directly into the instruction list to avoid re-assembling the circuit
         # TODO: investigate if Qiskit has a method to do this better.
         qobj_exps = []
         first = next(i for i, ins in enumerate(qobj_exp.instructions) if ins.name == 'ry')
-        for thetas in experiments:
+        for xs, thetas in zip(experiments, exp_thetas):
             shallow = copy.copy(qobj_exp)
             shallow.instructions = shallow.instructions[:]
-            for i, theta in enumerate(thetas):
-                shallow.instructions[first + i] = copy.copy(shallow.instructions[first + i])
-                shallow.instructions[first + i].params = shallow.instructions[first + i].params[:]
-                shallow.instructions[first + i].params[0] = qiskit.circuit.ParameterExpression({}, theta)
+            for i, [x, theta] in enumerate(zip(xs, thetas)):
+                rx = first + i * 4
+                ry = rx + 2
+                shallow.instructions[rx] = copy.copy(shallow.instructions[rx])
+                shallow.instructions[rx].params = shallow.instructions[rx].params[:]
+                shallow.instructions[rx].params[0] = qiskit.circuit.ParameterExpression({}, x)
+                shallow.instructions[ry] = copy.copy(shallow.instructions[ry])
+                shallow.instructions[ry].params = shallow.instructions[ry].params[:]
+                shallow.instructions[ry].params[0] = qiskit.circuit.ParameterExpression({}, theta)
             qobj_exps.append(shallow)
         return qobj_exps

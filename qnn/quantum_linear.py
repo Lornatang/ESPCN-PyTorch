@@ -160,7 +160,7 @@ class QuantumFunction(Function):
         inputs_gradient = inputs_gradient.flatten(1)
         thetas_gradient = thetas_gradient.mean(0)
 
-        return inputs_gradient, thetas_gradient, None, None, None, None
+        return inputs_gradient, thetas_gradient, None, None, None
 
 
 class QuantumLinear(nn.Module):
@@ -172,7 +172,7 @@ class QuantumLinear(nn.Module):
         # Just create one circuit as all are equal
         self.circuit = QuantumCircuit(qubits, backend, shots)
         # Initialize thetas (weights)
-        self.thetas = torch.nn.Parameter(torch.FloatTensor(n_circuits, qubits).uniform_(-torch.pi, torch.pi))
+        self.thetas = torch.nn.Parameter(torch.FloatTensor(n_circuits, qubits).uniform_(-torch.pi/2, torch.pi/2))
 
     def forward(self, batches):
         return QuantumFunction.apply(batches, self.thetas, self.n_circuits, self.circuit, self.shift)

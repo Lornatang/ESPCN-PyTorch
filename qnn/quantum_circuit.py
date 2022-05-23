@@ -1,7 +1,10 @@
 import copy
 import qiskit
 import torch
+import numpy as np
 from qiskit import transpile, assemble
+from qiskit.result.models import ExperimentResult
+
 
 class QuantumCircuit:
     def __init__(self, n_qubits, backend, shots):
@@ -25,7 +28,7 @@ class QuantumCircuit:
 
         self.backend = backend
         self.shots = shots
-        # Transpile & assemble circuit in advance to speed-up execution
+        # Transpile circuit in advance to speed-up execution
         self.t_qc = transpile(self._circuit, self.backend)
 
     def run(self, experiments, thetas):
@@ -42,20 +45,30 @@ class QuantumCircuit:
 
         job = self.backend.run(qobj)
         result = job.result()
-        counts = result.get_counts()
 
-        expectations = []
-        for exp in counts:
-            # Get pauli-Z expectation
-            val = 0.0
-            for bitstring, count in exp.items():
-                sign = (-1) ** bitstring.count("0")
-                val += sign * count
-            expectations.append(val)
+        # Qiskit get_counts is too slow, extract HEX results from the result object
+        # and use them to count the amount of zeroes which is what we need to
+        # calculate the expectation.
+        expectations = [QuantumCircuit.get_expectation(res) for res in result.results]
 
         expectations = torch.tensor(expectations).to(device)
 
         return expectations / self.shots
+
+    @staticmethod
+    def get_expectation(result: ExperimentResult):
+        counts_dict = result.data.counts
+
+        # Get pauli-Z expectation
+        signs = np.array([-1 if QuantumCircuit.get_zeroes(h) % 2 else 1 for h in counts_dict.keys()])
+        counts = np.array(list(counts_dict.values()))
+        values = signs * counts
+
+        return np.sum(values)
+
+    @staticmethod
+    def get_zeroes(hex_: str) -> int:
+        return bin(int(hex_, 16))[2:].count('0')
 
     @staticmethod
     def get_experiments(qobj_exp, experiments, exp_thetas):

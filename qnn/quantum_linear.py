@@ -141,7 +141,7 @@ class QuantumFunction(Function):
         # Transform non-shifted thetas to be passed together with shifted inputs
         normal_thetas = thetas.repeat(2 * ctx.qubits * ctx.batch_size, 1)
 
-        # Transform thetas to match same input format as batches (just to reuse same logic)
+        # Transform thetas to match same input format as batches
         thetas = thetas.unsqueeze(0).repeat_interleave(ctx.batch_size, 0)
         thetas = thetas.flatten(1)
         # Shift inputs and thetas to be passed together with non-shifted pairs

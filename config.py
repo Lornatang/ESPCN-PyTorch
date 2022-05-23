@@ -15,6 +15,7 @@ import random
 
 import numpy as np
 import torch
+from qiskit.providers.aer import AerSimulator
 from torch.backends import cudnn
 
 # Random seed to maintain reproducible results
@@ -31,6 +32,15 @@ upscale_factor = 2
 mode = "train"
 # Experiment name, easy to save weights and log files
 exp_name = "espcn_x2"
+# Quantum backend
+backend = AerSimulator(**{
+    'device': 'CPU',
+    'method': 'statevector',
+    'max_parallel_experiments': 0,
+})
+# Quantum shift & shots
+shift = np.pi / 2
+shots = 100
 
 if mode == "train":
     # Dataset
@@ -39,16 +49,16 @@ if mode == "train":
     test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
     test_hr_image_dir = f"data/Set5/GTmod12"
 
-    image_size = int(upscale_factor * 17)
+    image_size = 16
     batch_size = 16
-    num_workers = 4
+    num_workers = 0
 
     # Incremental training and migration training
     start_epoch = 0
     resume = ""
 
     # Total num epochs
-    epochs = 3000
+    epochs = 100
 
     # SGD optimizer parameter
     model_lr = 1e-2
@@ -56,9 +66,15 @@ if mode == "train":
     model_weight_decay = 1e-4
     model_nesterov = False
 
+    # Quantum learning rate & shots
+    q_learning_rate = 1e-1
+
     # Optimizer scheduler parameter
-    lr_scheduler_milestones = [int(epochs * 0.1), int(epochs * 0.8)]
+    lr_scheduler_milestones = [int(epochs * 0.25), int(epochs * 0.8)]
     lr_scheduler_gamma = 0.1
+
+    # Downscale test images
+    test_downscale = True
 
     print_frequency = 50
 

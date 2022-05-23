@@ -1,17 +1,18 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from qnn.quantum_linear import QuantumLinear
 
 class QuantumConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, backend, shots, shift, stride=1, padding=0):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, backend, shots, shift, stride=1):
         super(QuantumConv2d, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
+        self.padding = padding
         # TODO: implement later
         # self.stride = stride
-        # self.padding = padding
 
         # Create circuits
         self.circuits = nn.ModuleList([
@@ -24,19 +25,22 @@ class QuantumConv2d(nn.Module):
 
     def forward(self, batches):
         n, iC, H, W = batches.size()
-        oC, iC, kH, kW = self.out_channels, self.in_channels, *self.kernel_size
-        oH, oW = H - (kH - 1), W - (kW - 1)
+        oC, iC, kH, kW, pH, pW = self.out_channels, self.in_channels, *self.kernel_size, *self.padding
+        oH, oW = H + 2 * pH - (kH - 1), W + 2 * pW - (kW - 1)
 
         # shape: (n, iC, H, W)
         in_channels = batches.transpose(0, 1)
         # shape: (iC, n, H, W)
+        # Add padding
+        padded_in_channels = F.pad(in_channels, (pH, pH, pW, pW))
+        # shape: (iC, n, H + pH, W + pW)
 
         out_channels = []  # shape: [oC](n, oH, oW)
         for i in range(oC):
             outputs = []  # shape: [iC](n, oH, oW)
 
-            for j, channel in enumerate(in_channels):
-                # shape: (n, H, W)
+            for j, channel in enumerate(padded_in_channels):
+                # shape: (n, H + pH, W + pW)
                 # Extract the (kH, kW) inputs that will be applied to the kernel
                 inputs = [channel[:, i: i + kH, j: j + kW] for i in range(oH) for j in range(oW)]
                 inputs = torch.stack(inputs, 1)

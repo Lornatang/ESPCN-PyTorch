@@ -26,8 +26,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import config
-from dataset import CUDAPrefetcher
-from dataset import TrainValidImageDataset, TestImageDataset
+from utils.dataset import CUDAPrefetcher
+from utils.dataset import TrainValidImageDataset, TestImageDataset
 from model import ESPCN
 
 
@@ -111,7 +111,10 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
     # Load train, test and valid datasets
     train_datasets = TrainValidImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "Train")
     valid_datasets = TrainValidImageDataset(config.valid_image_dir, config.image_size, config.upscale_factor, "Valid")
-    test_datasets = TestImageDataset(config.test_lr_image_dir, config.test_hr_image_dir, config.upscale_factor)
+    test_datasets = TestImageDataset(
+        config.test_lr_image_dir, config.test_hr_image_dir, config.image_size, config.upscale_factor,
+        config.test_downscale
+    )
 
     # Generator all dataloader
     train_dataloader = DataLoader(train_datasets,
@@ -120,14 +123,14 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                   num_workers=config.num_workers,
                                   pin_memory=True,
                                   drop_last=True,
-                                  persistent_workers=True)
+                                  persistent_workers=bool(config.num_workers))
     valid_dataloader = DataLoader(valid_datasets,
                                   batch_size=config.batch_size,
                                   shuffle=False,
                                   num_workers=config.num_workers,
                                   pin_memory=True,
                                   drop_last=False,
-                                  persistent_workers=True)
+                                  persistent_workers=bool(config.num_workers))
     test_dataloader = DataLoader(test_datasets,
                                  batch_size=1,
                                  shuffle=False,
@@ -145,7 +148,7 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
 
 
 def build_model() -> nn.Module:
-    model = ESPCN(config.upscale_factor).to(config.device)
+    model = ESPCN().to(config.device)
 
     return model
 
@@ -158,11 +161,17 @@ def define_loss() -> [nn.MSELoss, nn.MSELoss]:
 
 
 def define_optimizer(model) -> optim.SGD:
-    optimizer = optim.SGD(model.parameters(),
-                          lr=config.model_lr,
-                          momentum=config.model_momentum,
-                          weight_decay=config.model_weight_decay,
-                          nesterov=config.model_nesterov)
+    optimizer = optim.SGD(
+        [
+            {'params': model.quantum_feature_map.parameters(), 'lr': config.q_learning_rate},
+            {'params': model.feature_maps.parameters()},
+            {'params': model.sub_pixel.parameters()},
+        ],
+        lr=config.model_lr,
+        momentum=config.model_momentum,
+        weight_decay=config.model_weight_decay,
+        nesterov=config.model_nesterov
+    )
 
     return optimizer
 
@@ -291,7 +300,6 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
         raise ValueError("Unsupported mode, please use `Valid` or `Test`.")
 
     return psnres.avg
-
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):

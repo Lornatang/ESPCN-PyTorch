@@ -20,13 +20,13 @@ import torch
 from natsort import natsorted
 
 import config
-import imgproc
+from utils import imgproc
 from model import ESPCN
 
 
 def main() -> None:
     # Initialize the super-resolution model
-    model = ESPCN(config.upscale_factor).to(config.device)
+    model = ESPCN().to(config.device)
     print("Build ESPCN model successfully.")
 
     # Load the super-resolution model weights

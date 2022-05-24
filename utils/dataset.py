@@ -107,7 +107,7 @@ class TestImageDataset(Dataset):
 
         # Lower resolution
         if self.downscale:
-            lr_image, hr_image = imgproc.random_crop(lr_image, hr_image, self.image_size, self.upscale_factor)
+            lr_image, hr_image = imgproc.center_crop(lr_image, hr_image, self.image_size, self.upscale_factor)
 
         # Only extract the image data of the Y channel
         lr_y_image = imgproc.bgr2ycbcr(lr_image, use_y_channel=True)

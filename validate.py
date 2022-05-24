@@ -42,7 +42,7 @@ def main() -> None:
     # Start the verification mode of the model.
     model.eval()
     # Turn on half-precision inference.
-    model.half()
+    # model.half()
 
     # Initialize the image evaluation index.
     total_psnr = 0.0

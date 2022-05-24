@@ -40,7 +40,7 @@ backend = AerSimulator(**{
 })
 # Quantum shift & shots
 shift = np.pi / 2
-shots = 100
+shots = 1024
 
 if mode == "train":
     # Dataset
@@ -58,7 +58,7 @@ if mode == "train":
     resume = ""
 
     # Total num epochs
-    epochs = 100
+    epochs = 1000
 
     # SGD optimizer parameter
     model_lr = 1e-2
@@ -67,7 +67,7 @@ if mode == "train":
     model_nesterov = False
 
     # Quantum learning rate & shots
-    q_learning_rate = 1e-1
+    q_learning_rate = 2.5e-1
 
     # Optimizer scheduler parameter
     lr_scheduler_milestones = [int(epochs * 0.25), int(epochs * 0.8)]

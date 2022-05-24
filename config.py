@@ -40,7 +40,7 @@ backend = AerSimulator(**{
 })
 # Quantum shift & shots
 shift = np.pi / 2
-shots = 1024
+shots = 32
 
 if mode == "train":
     # Dataset

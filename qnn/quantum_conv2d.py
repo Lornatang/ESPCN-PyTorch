@@ -15,12 +15,10 @@ class QuantumConv2d(nn.Module):
         # self.stride = stride
 
         # Create circuits
+        kH, kW = self.kernel_size
         self.circuits = nn.ModuleList([
-            QuantumLinear(
-                1, self.kernel_size[0] * self.kernel_size[1],
-                backend, shots, shift
-            )
-            for _ in range(self.out_channels * self.in_channels)
+            QuantumLinear(kH, kW, backend, shots, shift)
+            for _ in range(self.out_channels * self.in_channels * kH)
         ])
 
     def forward(self, batches):
@@ -49,11 +47,13 @@ class QuantumConv2d(nn.Module):
                 linear_batches = inputs.flatten(0, 1).flatten(1)
                 # shape: (n * oH * oW, kH * kW)
                 linear_result = self.circuits[i * j](linear_batches)
-                # shape: (n * oH * oW, 1)
-                # Convert results to out image (oH, oW)
-                out = linear_result.view(n, oH, oW)
+                # shape: (n * oH * oW, kH)
+                linear_result = linear_result.view(n, oH, oW, kH)
+                # shape: (n, oH, oW, kH)
+                # Average the results for each row of the kernel
+                average = torch.mean(linear_result, dim=3)
                 # shape: (n, oH, oW)
-                outputs.append(out)
+                outputs.append(average)
 
             # Aggregate outputs into a single out channel
             out_channel = torch.sum(torch.stack(outputs), dim=0)

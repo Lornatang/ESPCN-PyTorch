@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 
 import torch
@@ -102,7 +104,7 @@ class QuantumFunction(Function):
         expectations_right, expectations_left = result
 
         # This is our dy/dq
-        gradient = (expectations_right - expectations_left) / 2
+        gradient = (expectations_right - expectations_left) / (2 * math.sin(ctx.shift))
 
         # shape: (|Q|, 256, 10)
 

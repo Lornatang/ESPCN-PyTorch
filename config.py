@@ -39,8 +39,8 @@ backend = AerSimulator(**{
     'max_parallel_experiments': 0,
 })
 # Quantum shift & shots
-shift = np.pi / 2
-shots = 32
+shift = np.pi / 4
+shots = 128
 
 if mode == "train":
     # Dataset
@@ -49,7 +49,7 @@ if mode == "train":
     test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
     test_hr_image_dir = f"data/Set5/GTmod12"
 
-    image_size = 16
+    image_size = int(upscale_factor * 8)
     batch_size = 16
     num_workers = 0
 

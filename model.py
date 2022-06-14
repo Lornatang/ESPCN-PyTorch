@@ -17,7 +17,7 @@ import torch
 from torch import nn
 
 import config
-from qnn.quantum_conv2d import QuantumConv2d
+from qcnn.qcnn_conv2d import QuantumConv2d
 
 class ESPCN(nn.Module):
     """

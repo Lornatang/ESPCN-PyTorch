@@ -22,8 +22,7 @@ class QuantumKernelFunction(Function):
         # shape: (N, n)
 
         # Run the circuit
-        experiments = ctx.circuit.build_input_experiments(inputs, thetas)
-        z_expectations = ctx.circuit.run(experiments, inputs.device)
+        z_expectations = ctx.circuit.run_inputs(inputs, thetas)
 
         # shape: (N)
 
@@ -119,14 +118,8 @@ class QuantumKernelFunction(Function):
         shifted_thetas = QuantumKernelFunction.get_shifted_param(ctx, transformed_thetas)
 
         # Do the pass. Run all inputs for each shift and collect results
-        input_experiments = ctx.circuit.build_input_experiments(shifted_inputs, thetas)
-        theta_experiments = ctx.circuit.build_theta_experiments(inputs, shifted_thetas)
-
-        results = ctx.circuit.run([*input_experiments, *theta_experiments], inputs.device)
-
-        # Separate results
-        input_results = results[:len(input_experiments)]
-        theta_results = results[len(input_experiments):]
+        input_results = ctx.circuit.run_inputs(shifted_inputs, thetas)
+        theta_results = ctx.circuit.run_thetas(inputs, shifted_thetas)
 
         # Get gradient for the obtained results
         inputs_gradient = QuantumKernelFunction.get_result_gradient(ctx, grad_output, input_results, inputs.shape[1])
@@ -136,11 +129,12 @@ class QuantumKernelFunction(Function):
 
 
 class QuantumKernel(nn.Module):
-    def __init__(self, kernel_size, backend, shots, shift):
+    def __init__(self, kernel_size, shift):
         super(QuantumKernel, self).__init__()
+        kH, kW = kernel_size
         self.kernel_size = kernel_size
         self.shift = shift
-        self.circuit = QuantumCircuit(kernel_size, backend, shots)
+        self.circuit = QuantumCircuit(kH * kW)
         # Initialize thetas (weights)
         self.thetas = torch.nn.Parameter(torch.FloatTensor(self.circuit.n_thetas).uniform_(-torch.pi/2, torch.pi/2))
 

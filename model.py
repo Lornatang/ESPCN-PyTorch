@@ -31,7 +31,7 @@ class ESPCN(nn.Module):
 
         # Quantum feature mapping
         self.quantum_feature_map = nn.Sequential(
-            QuantumConv2d(1, 1, (3, 3), (1, 1), config.backend, config.shots, config.shift),
+            QuantumConv2d(1, 1, (5, 5), (2, 2), config.shift),
         )
 
         # Feature mapping

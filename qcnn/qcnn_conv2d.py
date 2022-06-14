@@ -4,8 +4,9 @@ import torch.nn.functional as F
 
 from qcnn.qcnn_kernel import QuantumKernel
 
+
 class QuantumConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, padding, backend, shots, shift, stride=1):
+    def __init__(self, in_channels, out_channels, kernel_size, padding, shift, stride=1):
         super(QuantumConv2d, self).__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -16,7 +17,7 @@ class QuantumConv2d(nn.Module):
 
         # Create circuits
         self.circuits = nn.ModuleList([
-            QuantumKernel(self.kernel_size, backend, shots, shift)
+            QuantumKernel(self.kernel_size, shift)
             for _ in range(self.out_channels * self.in_channels)
         ])
 

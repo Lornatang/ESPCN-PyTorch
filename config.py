@@ -15,7 +15,6 @@ import random
 
 import numpy as np
 import torch
-from qiskit.providers.aer import AerSimulator
 from torch.backends import cudnn
 
 # Random seed to maintain reproducible results
@@ -32,15 +31,8 @@ upscale_factor = 2
 mode = "train"
 # Experiment name, easy to save weights and log files
 exp_name = "espcn_x2"
-# Quantum backend
-backend = AerSimulator(**{
-    'device': 'CPU',
-    'method': 'statevector',
-    'max_parallel_experiments': 0,
-})
-# Quantum shift & shots
+# Quantum shift
 shift = np.pi / 4
-shots = 128
 
 if mode == "train":
     # Dataset
@@ -49,7 +41,7 @@ if mode == "train":
     test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
     test_hr_image_dir = f"data/Set5/GTmod12"
 
-    image_size = int(upscale_factor * 8)
+    image_size = int(upscale_factor * 17)
     batch_size = 16
     num_workers = 0
 

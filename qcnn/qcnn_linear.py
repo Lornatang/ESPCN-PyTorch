@@ -4,14 +4,14 @@ from torch import nn
 from qcnn.qcnn_kernel import QuantumKernel
 
 class QuantumLinear(nn.Module):
-    def __init__(self, n_circuits, qubits, backend, shots, shift):
+    def __init__(self, n_circuits, qubits, shift):
         super(QuantumLinear, self).__init__()
         self.n_circuits = n_circuits
         self.qubits = qubits
 
         # Create circuits
         self.circuits = nn.ModuleList([
-            QuantumKernel((1, self.qubits), backend, shots, shift)
+            QuantumKernel((1, self.qubits), shift)
             for _ in range(self.n_circuits)
         ])
 

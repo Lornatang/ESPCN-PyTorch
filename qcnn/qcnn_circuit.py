@@ -1,90 +1,59 @@
+import ctypes
 import math
-import qiskit
 import torch
-import signal
 import numpy as np
-from multiprocessing import Pool
-from qiskit import transpile, assemble
-from qiskit_machine_learning.circuit.library import RawFeatureVector
-from qcnn.qcnn_circuit_helpers import get_results, get_input_experiments, get_theta_experiments, prebuild_theta_inputs
+import pathlib
 
+directory = pathlib.Path(__file__).parent.resolve().__str__()
+clib = ctypes.cdll.LoadLibrary(directory + "/bridge/cmake-build-debug/libbridge.so")
 
-def init_worker():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+clib.run_inputs.argtypes = [
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'),
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=2, flags='C_CONTIGUOUS'),
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'),
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+]
 
-
-pool = Pool(initializer=init_worker)
+clib.run_thetas.argtypes = [
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'),
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=2, flags='C_CONTIGUOUS'),
+    np.ctypeslib.ndpointer(dtype=np.float32, ndim=2, flags='C_CONTIGUOUS'),
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+]
 
 
 class QuantumCircuit:
-    def __init__(self, kernel_size, backend, shots):
-        self.kernel_size = kernel_size
-
-        # --- Circuit definition ---
-        kH, kW = self.kernel_size
-        # Last amplitudes will be wasted as feature vector has to be power of 2
-        self.n_feature_qubits = math.ceil(math.log2(kH * kW + 1)) # Add +1 normalization element
+    def __init__(self, n_inputs):
+        self.n_inputs = n_inputs
+        self.n_feature_qubits = math.ceil(math.log2(n_inputs + 1))
         self.n_thetas = self.n_feature_qubits * 3
-        self._circuit = RawFeatureVector(2 ** self.n_feature_qubits)
-        self._circuit = self._circuit.assign_parameters(np.ones(2 ** self.n_feature_qubits))
 
-        self.thetas = qiskit.circuit.ParameterVector('Θ', self.n_thetas)
+    def run_inputs(self, inputs, thetas):
+        device = inputs.device
 
-        self._circuit.measure_all()
-        self._circuit.add_register(qiskit.circuit.QuantumRegister(1, 't'))  # Target qubit
-        self._circuit.barrier()
-        for i in range(self.n_feature_qubits):
-            self._circuit.cu3(
-                self.thetas[3 * i],
-                self.thetas[3 * i + 1],
-                self.thetas[3 * i + 2],
-                i, self.n_feature_qubits
-            )
-        self._circuit.barrier()
+        inputs = inputs.cpu().numpy().astype(np.float32)
+        thetas = thetas.cpu().numpy().astype(np.float32)
+        expectations = np.empty(shape=inputs.shape[0], dtype=np.float32)
 
-        self._circuit.draw(output='mpl', filename='circuit.png')
-        # ---------------------------
+        clib.run_inputs(expectations, inputs, thetas, inputs.shape[0], inputs.shape[1], 0)
 
-        self.backend = backend
-        self.shots = shots
-        # Transpile and assemble circuit in advance to speed-up execution
-        self.t_qc = transpile(self._circuit, self.backend)
-        self.qobj = assemble(
-            self.t_qc,
-            shots=self.shots,
-            parameter_binds=[{param: 0 for params in zip(self.thetas) for param in params}]
-        )
+        return torch.tensor(expectations).to(device)
 
-    def build_input_experiments(self, inputs: torch.Tensor, thetas: torch.Tensor):
-        inputs = inputs.cpu().detach().numpy()
-        thetas = thetas.cpu().detach().numpy()
+    def run_thetas(self, inputs, thetas):
+        device = inputs.device
 
-        chunks = np.array_split(inputs, pool._processes)
+        inputs = inputs.cpu().numpy().astype(np.float32)
+        thetas = thetas.cpu().numpy().astype(np.float32)
+        expectations = np.empty(shape=inputs.shape[0] * thetas.shape[0], dtype=np.float32)
 
-        chunked_experiments = pool.starmap(get_input_experiments, [(
-            self.qobj.experiments[0], chunk, thetas, self.n_feature_qubits
-        ) for chunk in chunks])
+        clib.run_thetas(expectations, inputs, thetas, inputs.shape[0], inputs.shape[1], thetas.shape[0], 0)
 
-        return [e for c in chunked_experiments for e in c]
-
-    def build_theta_experiments(self, inputs: torch.Tensor, thetas: torch.Tensor):
-        inputs = inputs.cpu().detach().numpy()
-        thetas = thetas.cpu().detach().numpy()
-
-        input_instructions = prebuild_theta_inputs(self.qobj.experiments[0], inputs, self.n_feature_qubits)
-        experiments = get_theta_experiments(self.qobj.experiments[0], thetas, input_instructions)
-
-        return experiments
-
-    def run(self, experiments, device):
-        chunks = np.array_split(np.array(experiments), pool._processes)
-        chunked_expectations = pool.starmap(get_results, [(
-            self.qobj, self.backend, chunk
-        ) for chunk in chunks])
-
-        expectations = torch.tensor([e for ce in chunked_expectations for e in ce]).to(device)
-
-        return expectations / self.shots
+        return torch.tensor(expectations).to(device)
 
 
 

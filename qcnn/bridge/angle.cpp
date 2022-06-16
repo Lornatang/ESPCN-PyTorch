@@ -32,15 +32,6 @@ real1 calc_expectation(const real1 *probabilities, int size, const real1 *eigenv
     return expectation;
 }
 
-void extend_input(real1 *out, const real1 *input, int size) {
-    int i;
-    for (i = 0; i < size; i++) {
-        out[i] = input[i];
-    }
-    // Add one extra normalization bit
-    out[i] = 1;
-}
-
 real1 run_circuit(
     int input_size,
     const real1 *input,
@@ -101,8 +92,7 @@ void run_inputs(
     float *inputs,
     float *thetas,
     int n_inputs,
-    int input_size,
-    int shots
+    int input_size
 ) {
     // Pre-calc variables
     int n_feature_qubits = std::ceil(std::log2(input_size + 1)); // Add normalization bit
@@ -136,8 +126,7 @@ void run_thetas(
     float *thetas,
     int n_inputs,
     int input_size,
-    int n_thetas,
-    int shots
+    int n_thetas
 ) {
     int n_feature_qubits = std::ceil(std::log2(input_size + 1)); // Add normalization bit
     int theta_size = n_feature_qubits * 3;
@@ -145,7 +134,7 @@ void run_thetas(
     float *theta_pointer = thetas;
     float *expectation_pointer = expectations;
     for (int i = 0; i < n_thetas; i++) {
-        run_inputs(expectation_pointer, inputs, theta_pointer, n_inputs, input_size, shots);
+        run_inputs(expectation_pointer, inputs, theta_pointer, n_inputs, input_size);
         theta_pointer += theta_size;
         expectation_pointer += n_inputs;
     }
@@ -153,7 +142,7 @@ void run_thetas(
 
 int main() {
     int input_size = 9;
-    auto *input = new float[input_size] { 0, 0, 0, 0, 0, 0, 0, 0, 0  };
+    auto *input = new float[input_size] { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9  };
     auto *thetas = new float[12] {
         -0.21107, 0.31022, -0.69577, -0.37123, 0.1, 0.2, -1.0, 0, -2.2, 0, 0, 0
     };
@@ -168,7 +157,9 @@ int main() {
         eigenvalues[i] = get_eigenvalue(i);
     }
 
-    std::cout << run_circuit(input_size, input, thetas, eigenvalues, n_feature_qubits, n_qubits, feature_sv_size, sv_size);
+
+    for (int i = 0; i < 1000; i++)
+        run_circuit(input_size, input, thetas, eigenvalues, n_feature_qubits, n_qubits, feature_sv_size, sv_size);
 
 //    run_deutsch();
 

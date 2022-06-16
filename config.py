@@ -66,7 +66,7 @@ if mode == "train":
     lr_scheduler_gamma = 0.1
 
     # Downscale test images
-    test_downscale = True
+    test_downscale = False
 
     print_frequency = 50
 

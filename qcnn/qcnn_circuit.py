@@ -5,7 +5,8 @@ import numpy as np
 import pathlib
 
 directory = pathlib.Path(__file__).parent.resolve().__str__()
-clib = ctypes.cdll.LoadLibrary(directory + "/bridge/cmake-build-debug/libbridge.so")
+# clib = ctypes.cdll.LoadLibrary(directory + "/bridge/libangle.so")
+clib = ctypes.cdll.LoadLibrary(directory + "/bridge/libamplitude.so")
 
 clib.run_inputs.argtypes = [
     np.ctypeslib.ndpointer(dtype=np.float32, ndim=1, flags='C_CONTIGUOUS'),

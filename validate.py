@@ -82,7 +82,7 @@ def main() -> None:
         total_psnr += 10. * torch.log10(1. / torch.mean((sr_y_tensor - hr_y_tensor) ** 2))
 
         # Save image
-        sr_y_image = imgproc.tensor2image(sr_y_tensor, range_norm=False, half=True)
+        sr_y_image = imgproc.tensor2image(sr_y_tensor, range_norm=False, half=False)
         sr_y_image = sr_y_image.astype(np.float32) / 255.0
         sr_ycbcr_image = cv2.merge([sr_y_image, hr_cb_image, hr_cr_image])
         sr_image = imgproc.ycbcr2bgr(sr_ycbcr_image)

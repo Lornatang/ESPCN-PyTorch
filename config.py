@@ -22,7 +22,7 @@ random.seed(0)
 torch.manual_seed(0)
 np.random.seed(0)
 # Use GPU for training by default
-device = torch.device("cuda", 0)
+device = torch.device("cpu", 0)
 # Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
 # Image magnification factor
@@ -50,7 +50,7 @@ if mode == "train":
     resume = ""
 
     # Total num epochs
-    epochs = 1000
+    epochs = 3000
 
     # SGD optimizer parameter
     model_lr = 1e-2

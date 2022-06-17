@@ -20,13 +20,13 @@ from enum import Enum
 import torch
 from torch import nn
 from torch import optim
-from torch.cuda import amp
+from torch.cpu import amp
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import config
-from utils.dataset import CUDAPrefetcher
+from utils.dataset import CPUPrefetcher
 from utils.dataset import TrainValidImageDataset, TestImageDataset
 from model import ESPCN
 
@@ -80,11 +80,8 @@ def main():
     # Create training process log file
     writer = SummaryWriter(os.path.join("samples", "logs", config.exp_name))
 
-    # Initialize the gradient scaler
-    scaler = amp.GradScaler()
-
     for epoch in range(config.start_epoch, config.epochs):
-        train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer)
+        train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, writer)
         _ = validate(model, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         psnr = validate(model, test_prefetcher, psnr_criterion, epoch, writer, "Test")
         print("\n")
@@ -107,7 +104,7 @@ def main():
             shutil.copyfile(os.path.join(samples_dir, f"epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "last.pth.tar"))
 
 
-def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
+def load_dataset() -> [CPUPrefetcher, CPUPrefetcher, CPUPrefetcher]:
     # Load train, test and valid datasets
     train_datasets = TrainValidImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "Train")
     valid_datasets = TrainValidImageDataset(config.valid_image_dir, config.image_size, config.upscale_factor, "Valid")
@@ -140,9 +137,9 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                  persistent_workers=False)
 
     # Place all data on the preprocessing data loader
-    train_prefetcher = CUDAPrefetcher(train_dataloader, config.device)
-    valid_prefetcher = CUDAPrefetcher(valid_dataloader, config.device)
-    test_prefetcher = CUDAPrefetcher(test_dataloader, config.device)
+    train_prefetcher = CPUPrefetcher(train_dataloader)
+    valid_prefetcher = CPUPrefetcher(valid_dataloader)
+    test_prefetcher = CPUPrefetcher(test_dataloader)
 
     return train_prefetcher, valid_prefetcher, test_prefetcher
 
@@ -182,7 +179,7 @@ def define_scheduler(optimizer) -> lr_scheduler.MultiStepLR:
     return scheduler
 
 
-def train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer) -> None:
+def train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, writer) -> None:
     # Calculate how many iterations there are under epoch
     batches = len(train_prefetcher)
 
@@ -212,16 +209,13 @@ def train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, e
         # Initialize the generator gradient
         model.zero_grad()
 
-        # Mixed precision training
-        with amp.autocast():
-            sr = model(lr)
-            loss = pixel_criterion(sr, hr)
+        sr = model(lr)
+        loss = pixel_criterion(sr, hr)
 
         # Gradient zoom
-        scaler.scale(loss).backward()
+        loss.backward()
         # Update generator weight
-        scaler.step(optimizer)
-        scaler.update()
+        optimizer.step()
 
         # measure accuracy and record loss
         psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
@@ -267,9 +261,7 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
             lr = batch_data["lr"].to(config.device, non_blocking=True)
             hr = batch_data["hr"].to(config.device, non_blocking=True)
 
-            # Mixed precision
-            with amp.autocast():
-                sr = model(lr)
+            sr = model(lr)
 
             # measure accuracy and record loss
             psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))

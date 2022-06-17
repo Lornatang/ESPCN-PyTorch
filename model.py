@@ -56,7 +56,7 @@ class ESPCN(nn.Module):
 
     # Support torch.script function.
     def _forward_impl(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.quantum_feature_map(x)
+        # x = self.quantum_feature_map(x)
         x = self.feature_maps(x)
         x = self.sub_pixel(x)
 

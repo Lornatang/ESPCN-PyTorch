@@ -5,7 +5,7 @@
 #include <climits>
 #include <omp.h>
 
-#define CORES 32
+#define CORES 7
 
 using namespace Qrack;
 
@@ -51,7 +51,7 @@ real1 run_circuit(
     int feature_sv_size,
     int sv_size
 ) {
-    QInterfacePtr q_reg = CreateQuantumInterface(QINTERFACE_OPTIMAL, n_qubits, 0);
+    QInterfacePtr q_reg = CreateQuantumInterface(QINTERFACE_CPU, n_qubits, 0);
 
     // Build initial state
     auto *extended_input = new real1[feature_sv_size] {};
@@ -97,9 +97,9 @@ real1 run_circuit(
 
 extern "C"
 void run_inputs(
-    float *expectations,
-    float *inputs,
-    float *thetas,
+    real1 *expectations,
+    const real1 *inputs,
+    const real1 *thetas,
     int n_inputs,
     int input_size
 ) {
@@ -113,15 +113,35 @@ void run_inputs(
         eigenvalues[i] = get_eigenvalue(i);
     }
 
-    #pragma omp parallel for default(none) shared( \
-        n_inputs, expectations, input_size, inputs, thetas, eigenvalues, \
-        n_feature_qubits, n_qubits, feature_sv_size, sv_size \
+    div_t inputs_over_thread = div(n_inputs, CORES);
+    int inputs_per_thread = inputs_over_thread.quot;
+    int inputs_last_thread = inputs_per_thread + inputs_over_thread.rem;
+
+    #pragma omp parallel default(none) firstprivate( \
+        expectations, input_size, inputs, thetas, eigenvalues, \
+        n_feature_qubits, n_qubits, feature_sv_size, sv_size, \
+        inputs_per_thread, inputs_last_thread \
     ) num_threads(CORES)
-    for (int i = 0; i < n_inputs; i++) {
-        expectations[i] = run_circuit(
-            input_size, &inputs[i * input_size], thetas, eigenvalues,
-            n_feature_qubits, n_qubits, feature_sv_size, sv_size
-        );
+    {
+        int tid = omp_get_thread_num();
+        int n_inputs = 0;
+        if (tid == CORES - 1) { n_inputs = inputs_last_thread; }
+        else { n_inputs = inputs_per_thread; }
+        int start = tid * inputs_per_thread;
+
+        auto local_inputs = new real1[n_inputs * input_size] {};
+        for (int i = 0; i < n_inputs * input_size; i++) {
+            local_inputs[i] = inputs[start * input_size + i];
+        }
+
+        for (int i = 0; i < n_inputs; i++) {
+            expectations[start + i] = run_circuit(
+                    input_size, &local_inputs[i * input_size], thetas, eigenvalues,
+                    n_feature_qubits, n_qubits, feature_sv_size, sv_size
+            );
+        }
+
+        delete[] local_inputs;
     }
 
     delete[] eigenvalues;
@@ -130,9 +150,9 @@ void run_inputs(
 
 extern "C"
 void run_thetas(
-    float *expectations,
-    float *inputs,
-    float *thetas,
+    real1 *expectations,
+    const real1 *inputs,
+    const real1 *thetas,
     int n_inputs,
     int input_size,
     int n_thetas
@@ -140,8 +160,8 @@ void run_thetas(
     int n_feature_qubits = std::ceil(std::log2(input_size + 1)); // Add normalization bit
     int theta_size = n_feature_qubits * 3;
 
-    float *theta_pointer = thetas;
-    float *expectation_pointer = expectations;
+    const real1 *theta_pointer = thetas;
+    real1 *expectation_pointer = expectations;
     for (int i = 0; i < n_thetas; i++) {
         run_inputs(expectation_pointer, inputs, theta_pointer, n_inputs, input_size);
         theta_pointer += theta_size;

@@ -1,4 +1,4 @@
-# Hybrid Qauntum-Classical Image Super-Resolution
+# Hybrid Quantum-Classical Image Super-Resolution
 
 ## Overview
 

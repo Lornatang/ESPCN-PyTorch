@@ -1,4 +1,4 @@
-# ESPCN-PyTorch
+# Hybrid Qauntum-Classical Image Super-Resolution
 
 ## Overview
 

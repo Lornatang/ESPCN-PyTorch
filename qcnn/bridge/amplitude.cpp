@@ -5,7 +5,7 @@
 #include <climits>
 #include <omp.h>
 
-#define CORES 7
+#define CORES 16
 
 using namespace Qrack;
 

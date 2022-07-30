@@ -46,7 +46,7 @@ class QuantumConv2d(nn.Module):
                 # Convert to batches of qubits
                 linear_batches = inputs.flatten(0, 1).flatten(1)
                 # shape: (n * oH * oW, kH * kW)
-                linear_result = self.circuits[i * j](linear_batches)
+                linear_result = self.circuits[i * oC + j](linear_batches)
                 # shape: (n * oH * oW, 1)
                 kernel_result = linear_result.view(n, oH, oW)
                 # shape: (n, oH, oW)

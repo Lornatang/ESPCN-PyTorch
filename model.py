@@ -34,6 +34,11 @@ class ESPCN(nn.Module):
             QuantumConv2d(1, 1, (3, 3), (1, 1), config.shift),
         )
 
+        # Classical feature mapping
+        self.classical_feature_map = nn.Sequential(
+            nn.Conv2d(1, 1, (3, 3), (1, 1), (1, 1)),
+        )
+
         # Feature mapping
         self.feature_maps = nn.Sequential(
             nn.Conv2d(1, 64, (5, 5), (1, 1), (2, 2)),
@@ -56,7 +61,8 @@ class ESPCN(nn.Module):
 
     # Support torch.script function.
     def _forward_impl(self, x: torch.Tensor) -> torch.Tensor:
-        # x = self.quantum_feature_map(x)
+        x = self.quantum_feature_map(x)
+        # x = self.classical_feature_map(x)
         x = self.feature_maps(x)
         x = self.sub_pixel(x)
 

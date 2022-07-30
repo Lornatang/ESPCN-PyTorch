@@ -43,7 +43,7 @@ if mode == "train":
 
     image_size = int(upscale_factor * 17)
     batch_size = 16
-    num_workers = 0
+    num_workers = 8
 
     # Incremental training and migration training
     start_epoch = 0

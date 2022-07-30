@@ -71,8 +71,8 @@ def main() -> None:
         hr_y_image, hr_cb_image, hr_cr_image = cv2.split(hr_ycbcr_image)
 
         # Convert Y image data convert to Y tensor data
-        lr_y_tensor = imgproc.image2tensor(lr_y_image, range_norm=False, half=True).to(config.device).unsqueeze_(0)
-        hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=True).to(config.device).unsqueeze_(0)
+        lr_y_tensor = imgproc.image2tensor(lr_y_image, range_norm=False, half=False).to(config.device).unsqueeze_(0)
+        hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=False).to(config.device).unsqueeze_(0)
 
         # Only reconstruct the Y channel image data.
         with torch.no_grad():

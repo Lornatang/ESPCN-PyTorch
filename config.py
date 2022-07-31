@@ -22,7 +22,7 @@ random.seed(0)
 torch.manual_seed(0)
 np.random.seed(0)
 # Use GPU for training by default
-device = torch.device("cuda", 0)
+device = torch.device("cpu", 0)
 # Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
 # Image magnification factor
@@ -31,6 +31,8 @@ upscale_factor = 2
 mode = "train"
 # Experiment name, easy to save weights and log files
 exp_name = "espcn_x2"
+# Quantum shift
+shift = np.pi / 4
 
 if mode == "train":
     # Dataset
@@ -41,7 +43,7 @@ if mode == "train":
 
     image_size = int(upscale_factor * 17)
     batch_size = 16
-    num_workers = 4
+    num_workers = 8
 
     # Incremental training and migration training
     start_epoch = 0
@@ -56,9 +58,15 @@ if mode == "train":
     model_weight_decay = 1e-4
     model_nesterov = False
 
+    # Quantum learning rate & shots
+    q_learning_rate = 2.5e-1
+
     # Optimizer scheduler parameter
-    lr_scheduler_milestones = [int(epochs * 0.1), int(epochs * 0.8)]
+    lr_scheduler_milestones = [int(epochs * 0.25), int(epochs * 0.8)]
     lr_scheduler_gamma = 0.1
+
+    # Downscale test images
+    test_downscale = False
 
     print_frequency = 50
 

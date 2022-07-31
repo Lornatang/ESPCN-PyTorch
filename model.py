@@ -16,6 +16,8 @@ from math import sqrt
 import torch
 from torch import nn
 
+import config
+from qcnn.qcnn_conv2d import QuantumConv2d
 
 class ESPCN(nn.Module):
     """
@@ -24,8 +26,18 @@ class ESPCN(nn.Module):
         upscale_factor (int): Image magnification factor.
     """
 
-    def __init__(self, upscale_factor: int) -> None:
+    def __init__(self) -> None:
         super(ESPCN, self).__init__()
+
+        # Quantum feature mapping
+        self.quantum_feature_map = nn.Sequential(
+            QuantumConv2d(1, 1, (3, 3), (1, 1), config.shift),
+        )
+
+        # Classical feature mapping
+        self.classical_feature_map = nn.Sequential(
+            nn.Conv2d(1, 1, (3, 3), (1, 1), (1, 1)),
+        )
 
         # Feature mapping
         self.feature_maps = nn.Sequential(
@@ -37,8 +49,8 @@ class ESPCN(nn.Module):
 
         # Sub-pixel convolution layer
         self.sub_pixel = nn.Sequential(
-            nn.Conv2d(32, 1 * (upscale_factor ** 2), (3, 3), (1, 1), (1, 1)),
-            nn.PixelShuffle(upscale_factor),
+            nn.Conv2d(32, config.upscale_factor ** 2, (3, 3), (1, 1), (1, 1)),
+            nn.PixelShuffle(config.upscale_factor),
         )
 
         # Initial model weights
@@ -49,10 +61,12 @@ class ESPCN(nn.Module):
 
     # Support torch.script function.
     def _forward_impl(self, x: torch.Tensor) -> torch.Tensor:
-        out = self.feature_maps(x)
-        out = self.sub_pixel(out)
+        x = self.quantum_feature_map(x)
+        # x = self.classical_feature_map(x)
+        x = self.feature_maps(x)
+        x = self.sub_pixel(x)
 
-        return out
+        return x
 
     def _initialize_weights(self):
         for module in self.modules():

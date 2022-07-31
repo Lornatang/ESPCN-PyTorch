@@ -21,7 +21,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-import imgproc
+import utils.imgproc as imgproc
 
 __all__ = [
     "TrainValidImageDataset", "TestImageDataset",
@@ -88,18 +88,26 @@ class TestImageDataset(Dataset):
         upscale_factor (int): Image up scale factor.
     """
 
-    def __init__(self, test_lr_image_dir: str, test_hr_image_dir: str, upscale_factor: int) -> None:
+    def __init__(self, test_lr_image_dir: str, test_hr_image_dir: str, image_size: int, upscale_factor: int, downscale: bool) -> None:
         super(TestImageDataset, self).__init__()
         # Get all image file names in folder
         self.lr_image_file_names = [os.path.join(test_lr_image_dir, x) for x in os.listdir(test_lr_image_dir)]
         self.hr_image_file_names = [os.path.join(test_hr_image_dir, x) for x in os.listdir(test_hr_image_dir)]
+        # Specify the high-resolution image size, with equal length and width
+        self.image_size = image_size
         # How many times the high-resolution image is the low-resolution image
         self.upscale_factor = upscale_factor
+        # Whether test images will be downscaled or not
+        self.downscale = downscale
 
     def __getitem__(self, batch_index: int) -> [torch.Tensor, torch.Tensor]:
         # Read a batch of image data
         lr_image = cv2.imread(self.lr_image_file_names[batch_index], cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.
         hr_image = cv2.imread(self.hr_image_file_names[batch_index], cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.
+
+        # Lower resolution
+        if self.downscale:
+            lr_image, hr_image = imgproc.center_crop(lr_image, hr_image, self.image_size, self.upscale_factor)
 
         # Only extract the image data of the Y channel
         lr_y_image = imgproc.bgr2ycbcr(lr_image, use_y_channel=True)

@@ -20,14 +20,14 @@ from enum import Enum
 import torch
 from torch import nn
 from torch import optim
-from torch.cuda import amp
+from torch.cpu import amp
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import config
-from dataset import CUDAPrefetcher
-from dataset import TrainValidImageDataset, TestImageDataset
+from utils.dataset import CPUPrefetcher
+from utils.dataset import TrainValidImageDataset, TestImageDataset
 from model import ESPCN
 
 
@@ -80,11 +80,8 @@ def main():
     # Create training process log file
     writer = SummaryWriter(os.path.join("samples", "logs", config.exp_name))
 
-    # Initialize the gradient scaler
-    scaler = amp.GradScaler()
-
     for epoch in range(config.start_epoch, config.epochs):
-        train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer)
+        train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, writer)
         _ = validate(model, valid_prefetcher, psnr_criterion, epoch, writer, "Valid")
         psnr = validate(model, test_prefetcher, psnr_criterion, epoch, writer, "Test")
         print("\n")
@@ -107,11 +104,14 @@ def main():
             shutil.copyfile(os.path.join(samples_dir, f"epoch_{epoch + 1}.pth.tar"), os.path.join(results_dir, "last.pth.tar"))
 
 
-def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
+def load_dataset() -> [CPUPrefetcher, CPUPrefetcher, CPUPrefetcher]:
     # Load train, test and valid datasets
     train_datasets = TrainValidImageDataset(config.train_image_dir, config.image_size, config.upscale_factor, "Train")
     valid_datasets = TrainValidImageDataset(config.valid_image_dir, config.image_size, config.upscale_factor, "Valid")
-    test_datasets = TestImageDataset(config.test_lr_image_dir, config.test_hr_image_dir, config.upscale_factor)
+    test_datasets = TestImageDataset(
+        config.test_lr_image_dir, config.test_hr_image_dir, config.image_size, config.upscale_factor,
+        config.test_downscale
+    )
 
     # Generator all dataloader
     train_dataloader = DataLoader(train_datasets,
@@ -120,14 +120,14 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                   num_workers=config.num_workers,
                                   pin_memory=True,
                                   drop_last=True,
-                                  persistent_workers=True)
+                                  persistent_workers=bool(config.num_workers))
     valid_dataloader = DataLoader(valid_datasets,
                                   batch_size=config.batch_size,
                                   shuffle=False,
                                   num_workers=config.num_workers,
                                   pin_memory=True,
                                   drop_last=False,
-                                  persistent_workers=True)
+                                  persistent_workers=bool(config.num_workers))
     test_dataloader = DataLoader(test_datasets,
                                  batch_size=1,
                                  shuffle=False,
@@ -137,15 +137,15 @@ def load_dataset() -> [CUDAPrefetcher, CUDAPrefetcher, CUDAPrefetcher]:
                                  persistent_workers=False)
 
     # Place all data on the preprocessing data loader
-    train_prefetcher = CUDAPrefetcher(train_dataloader, config.device)
-    valid_prefetcher = CUDAPrefetcher(valid_dataloader, config.device)
-    test_prefetcher = CUDAPrefetcher(test_dataloader, config.device)
+    train_prefetcher = CPUPrefetcher(train_dataloader)
+    valid_prefetcher = CPUPrefetcher(valid_dataloader)
+    test_prefetcher = CPUPrefetcher(test_dataloader)
 
     return train_prefetcher, valid_prefetcher, test_prefetcher
 
 
 def build_model() -> nn.Module:
-    model = ESPCN(config.upscale_factor).to(config.device)
+    model = ESPCN().to(config.device)
 
     return model
 
@@ -158,11 +158,17 @@ def define_loss() -> [nn.MSELoss, nn.MSELoss]:
 
 
 def define_optimizer(model) -> optim.SGD:
-    optimizer = optim.SGD(model.parameters(),
-                          lr=config.model_lr,
-                          momentum=config.model_momentum,
-                          weight_decay=config.model_weight_decay,
-                          nesterov=config.model_nesterov)
+    optimizer = optim.SGD(
+        [
+            {'params': model.quantum_feature_map.parameters(), 'lr': config.q_learning_rate},
+            {'params': model.feature_maps.parameters()},
+            {'params': model.sub_pixel.parameters()},
+        ],
+        lr=config.model_lr,
+        momentum=config.model_momentum,
+        weight_decay=config.model_weight_decay,
+        nesterov=config.model_nesterov
+    )
 
     return optimizer
 
@@ -173,7 +179,7 @@ def define_scheduler(optimizer) -> lr_scheduler.MultiStepLR:
     return scheduler
 
 
-def train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, scaler, writer) -> None:
+def train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, epoch, writer) -> None:
     # Calculate how many iterations there are under epoch
     batches = len(train_prefetcher)
 
@@ -203,16 +209,13 @@ def train(model, train_prefetcher, psnr_criterion, pixel_criterion, optimizer, e
         # Initialize the generator gradient
         model.zero_grad()
 
-        # Mixed precision training
-        with amp.autocast():
-            sr = model(lr)
-            loss = pixel_criterion(sr, hr)
+        sr = model(lr)
+        loss = pixel_criterion(sr, hr)
 
         # Gradient zoom
-        scaler.scale(loss).backward()
+        loss.backward()
         # Update generator weight
-        scaler.step(optimizer)
-        scaler.update()
+        optimizer.step()
 
         # measure accuracy and record loss
         psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
@@ -258,9 +261,7 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
             lr = batch_data["lr"].to(config.device, non_blocking=True)
             hr = batch_data["hr"].to(config.device, non_blocking=True)
 
-            # Mixed precision
-            with amp.autocast():
-                sr = model(lr)
+            sr = model(lr)
 
             # measure accuracy and record loss
             psnr = 10. * torch.log10(1. / psnr_criterion(sr, hr))
@@ -291,7 +292,6 @@ def validate(model, valid_prefetcher, psnr_criterion, epoch, writer, mode) -> fl
         raise ValueError("Unsupported mode, please use `Valid` or `Test`.")
 
     return psnres.avg
-
 
 # Copy form "https://github.com/pytorch/examples/blob/master/imagenet/main.py"
 class Summary(Enum):

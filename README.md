@@ -107,11 +107,11 @@ Source of original paper results: [https://arxiv.org/pdf/1609.05158v2.pdf](https
 
 In the following table, the value in `()` indicates the result of the project, and `-` indicates no test.
 
-|  Method  | Scale | Set5 (PSNR)  | Set14 (PSNR) |
-|:--------:|:-----:|:------------:|:------------:|
-| ESPCN_x4 |   2   |   -(**-**)   |   -(**-**)   |
-| ESPCN_x3 |   3   | 33.13(**-**) | 29.49(**-**) |
-| ESPCN_x4 |   4   | 30.90(**-**) | 27.73(**-**) |
+|  Method  | Scale |   Set5 (PSNR)    |   Set14 (PSNR)   |
+|:--------:|:-----:|:----------------:|:----------------:|
+| ESPCN_x4 |   2   |   -(**36.64**)   |   -(**32.35**)   |
+| ESPCN_x3 |   3   | 32.55(**32.55**) | 29.08(**29.20**) |
+| ESPCN_x4 |   4   | 30.90(**30.26**) | 27.73(**27.41**) |
 
 ```bash
 # Download `ESPCN_x4-T91-64bf5ee4.pth.tar` weights to `./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar`

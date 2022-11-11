@@ -25,47 +25,64 @@ np.random.seed(0)
 device = torch.device("cuda", 0)
 # Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
-# Image magnification factor
-upscale_factor = 2
+# When evaluating the performance of the SR model, whether to verify only the Y channel image data
+only_test_y_channel = True
+# Model architecture name
+model_arch_name = "espcn_x4"
+# Model arch config
+in_channels = 1
+out_channels = 1
+channels = 64
+upscale_factor = 4
 # Current configuration parameter method
 mode = "train"
 # Experiment name, easy to save weights and log files
-exp_name = "espcn_x2"
+exp_name = "ESPCN_x2-T91"
 
 if mode == "train":
-    # Dataset
-    train_image_dir = f"data/T91/ESPCN/train"
-    valid_image_dir = f"data/T91/ESPCN/valid"
-    test_lr_image_dir = f"data/Set5/LRbicx{upscale_factor}"
-    test_hr_image_dir = f"data/Set5/GTmod12"
+    # Dataset address
+    train_gt_images_dir = f"./data/T91/ESPCN/train"
+
+    test_gt_images_dir = f"./data/Set5/GTmod12"
+    test_lr_images_dir = f"./data/Set5/LRbicx{upscale_factor}"
 
     image_size = int(upscale_factor * 17)
     batch_size = 16
     num_workers = 4
 
+    # The address to load the pretrained model
+    pretrained_model_weights_path = f""
+
     # Incremental training and migration training
-    start_epoch = 0
-    resume = ""
+    resume_model_weights_path = f""
 
     # Total num epochs
     epochs = 3000
 
-    # SGD optimizer parameter
+    # loss function weights
+    loss_weights = 1.0
+
+    # Optimizer parameter
     model_lr = 1e-2
     model_momentum = 0.9
     model_weight_decay = 1e-4
     model_nesterov = False
 
-    # Optimizer scheduler parameter
+    # EMA parameter
+    model_ema_decay = 0.999
+
+    # Dynamically adjust the learning rate policy
     lr_scheduler_milestones = [int(epochs * 0.1), int(epochs * 0.8)]
     lr_scheduler_gamma = 0.1
 
-    print_frequency = 50
+    # How many iterations to print the training result
+    train_print_frequency = 100
+    valid_print_frequency = 1
 
-if mode == "valid":
+if mode == "test":
     # Test data address
-    lr_dir = f"data/Set5/LRbicx{upscale_factor}"
-    sr_dir = f"results/test/{exp_name}"
-    hr_dir = f"data/Set5/GTmod12"
+    lr_dir = f"./data/Set5/LRbicx{upscale_factor}"
+    sr_dir = f"./results/test/{exp_name}"
+    gt_dir = "./data/Set5/GTmod12"
 
-    model_path = f"results/{exp_name}/best.pth.tar"
+    g_model_weights_path = "./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar"

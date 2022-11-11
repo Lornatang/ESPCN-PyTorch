@@ -1,4 +1,4 @@
-# Copyright 2021 Dakewe Biotech Corporation. All Rights Reserved.
+# Copyright 2022 Dakewe Biotech Corporation. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -45,11 +45,11 @@ def worker(image_file_name, args) -> None:
     image_height, image_width = image.shape[0:2]
 
     index = 1
-    if image_height >= args.image_size and image_width >= args.image_size:
-        for pos_y in range(0, image_height - args.image_size + 1, args.step):
-            for pos_x in range(0, image_width - args.image_size + 1, args.step):
+    if image_height >= args.gt_image_size and image_width >= args.gt_image_size:
+        for pos_y in range(0, image_height - args.gt_image_size + 1, args.step):
+            for pos_x in range(0, image_width - args.gt_image_size + 1, args.step):
                 # Crop
-                crop_image = image[pos_y: pos_y + args.image_size, pos_x:pos_x + args.image_size, ...]
+                crop_image = image[pos_y: pos_y + args.gt_image_size, pos_x:pos_x + args.gt_image_size, ...]
                 crop_image = np.ascontiguousarray(crop_image)
                 # Save image
                 cv2.imwrite(f"{args.output_dir}/{image_file_name.split('.')[-2]}_{index:04d}.{image_file_name.split('.')[-1]}", crop_image)

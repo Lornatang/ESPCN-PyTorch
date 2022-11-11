@@ -26,7 +26,7 @@ device = torch.device("cuda", 0)
 # Turning on when the image size does not change during training can speed up training
 cudnn.benchmark = True
 # When evaluating the performance of the SR model, whether to verify only the Y channel image data
-only_test_y_channel = True
+only_test_y_channel = False
 # Model architecture name
 model_arch_name = "espcn_x4"
 # Model arch config
@@ -37,7 +37,7 @@ upscale_factor = 4
 # Current configuration parameter method
 mode = "train"
 # Experiment name, easy to save weights and log files
-exp_name = "ESPCN_x2-T91"
+exp_name = "ESPCN_x4-T91"
 
 if mode == "train":
     # Dataset address
@@ -46,7 +46,7 @@ if mode == "train":
     test_gt_images_dir = f"./data/Set5/GTmod12"
     test_lr_images_dir = f"./data/Set5/LRbicx{upscale_factor}"
 
-    image_size = int(upscale_factor * 17)
+    gt_image_size = int(17 * upscale_factor)
     batch_size = 16
     num_workers = 4
 
@@ -77,7 +77,7 @@ if mode == "train":
 
     # How many iterations to print the training result
     train_print_frequency = 100
-    valid_print_frequency = 1
+    test_print_frequency = 1
 
 if mode == "test":
     # Test data address

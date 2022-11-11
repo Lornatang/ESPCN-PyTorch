@@ -1,4 +1,4 @@
-# Copyright 2021 Dakewe Biotech Corporation. All Rights Reserved.
+# Copyright 2022 Dakewe Biotech Corporation. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Realize the function of dataset preparation."""
 import os
 import queue
 import threading
@@ -19,6 +18,7 @@ import threading
 import cv2
 import numpy as np
 import torch
+from torch import Tensor
 from torch.utils.data import Dataset, DataLoader
 
 import imgproc
@@ -30,50 +30,54 @@ __all__ = [
 
 
 class TrainValidImageDataset(Dataset):
-    """Customize the data set loading function and prepare low/high resolution image data in advance.
+    """Define training/valid dataset loading methods.
 
     Args:
-        image_dir (str): Train/Valid dataset address.
-        image_size (int): High resolution image size.
+        gt_image_dir (str): Train/Valid ground-truth dataset address.
+        gt_image_size (int): Ground-truth resolution image size.
         upscale_factor (int): Image up scale factor.
-        mode (str): Data set loading method, the training data set is for data enhancement, and the verification data set is not for data enhancement.
+        mode (str): Data set loading method, the training data set is for data enhancement, and the
+            verification dataset is not for data enhancement.
     """
 
-    def __init__(self, image_dir: str, image_size: int, upscale_factor: int, mode: str) -> None:
+    def __init__(
+            self,
+            gt_image_dir: str,
+            gt_image_size: int,
+            upscale_factor: int,
+            mode: str,
+    ) -> None:
         super(TrainValidImageDataset, self).__init__()
-        # Get all image file names in folder
-        self.image_file_names = [os.path.join(image_dir, image_file_name) for image_file_name in os.listdir(image_dir)]
-        # Specify the high-resolution image size, with equal length and width
-        self.image_size = image_size
-        # How many times the high-resolution image is the low-resolution image
+        self.image_file_names = [os.path.join(gt_image_dir, image_file_name) for image_file_name in
+                                 os.listdir(gt_image_dir)]
+        self.gt_image_size = gt_image_size
         self.upscale_factor = upscale_factor
-        # Load training dataset or test dataset
         self.mode = mode
 
-    def __getitem__(self, batch_index: int) -> [torch.Tensor, torch.Tensor]:
+    def __getitem__(self, batch_index: int) -> [dict[str, Tensor], dict[str, Tensor]]:
         # Read a batch of image data
-        hr_image = cv2.imread(self.image_file_names[batch_index], cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.
-        # Use high-resolution image to make low-resolution image
-        lr_image = imgproc.imresize(hr_image, 1 / self.upscale_factor)
+        gt_crop_image = cv2.imread(self.image_file_names[batch_index]).astype(np.float32) / 255.
 
+        # Image processing operations
         if self.mode == "Train":
-            # Data augment
-            lr_image, hr_image = imgproc.random_crop(lr_image, hr_image, self.image_size, self.upscale_factor)
+            gt_crop_image = imgproc.random_crop(gt_crop_image, self.gt_image_size)
         elif self.mode == "Valid":
-            lr_image, hr_image = imgproc.center_crop(lr_image, hr_image, self.image_size, self.upscale_factor)
+            gt_crop_image = imgproc.center_crop(gt_crop_image, self.gt_image_size)
         else:
             raise ValueError("Unsupported data processing model, please use `Train` or `Valid`.")
 
-        # Only extract the image data of the Y channel
-        lr_y_image = imgproc.bgr2ycbcr(lr_image, use_y_channel=True)
-        hr_y_image = imgproc.bgr2ycbcr(hr_image, use_y_channel=True)
+        lr_crop_image = imgproc.image_resize(gt_crop_image, 1 / self.upscale_factor)
+
+        # BGR convert Y channel
+        gt_crop_y_image = imgproc.bgr_to_ycbcr(gt_crop_image, only_use_y_channel=True)
+        lr_crop_y_image = imgproc.bgr_to_ycbcr(lr_crop_image, only_use_y_channel=True)
 
         # Convert image data into Tensor stream format (PyTorch).
         # Note: The range of input and output is between [0, 1]
-        lr_y_tensor = imgproc.image2tensor(lr_y_image, range_norm=False, half=False)
-        hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=False)
+        gt_crop_y_tensor = imgproc.image_to_tensor(gt_crop_y_image, False, False)
+        lr_crop_y_tensor = imgproc.image_to_tensor(lr_crop_y_image, False, False)
 
-        return {"lr": lr_y_tensor, "hr": hr_y_tensor}
+        return {"gt": gt_crop_y_tensor, "lr": lr_crop_y_tensor}
 
     def __len__(self) -> int:
         return len(self.image_file_names)
@@ -83,37 +87,34 @@ class TestImageDataset(Dataset):
     """Define Test dataset loading methods.
 
     Args:
-        test_lr_image_dir (str): Test dataset address for low resolution image dir.
-        test_hr_image_dir (str): Test dataset address for high resolution image dir.
-        upscale_factor (int): Image up scale factor.
+        test_gt_images_dir (str): ground truth image in test image
+        test_lr_images_dir (str): low-resolution image in test image
     """
 
-    def __init__(self, test_lr_image_dir: str, test_hr_image_dir: str, upscale_factor: int) -> None:
+    def __init__(self, test_gt_images_dir: str, test_lr_images_dir: str) -> None:
         super(TestImageDataset, self).__init__()
         # Get all image file names in folder
-        self.lr_image_file_names = [os.path.join(test_lr_image_dir, x) for x in os.listdir(test_lr_image_dir)]
-        self.hr_image_file_names = [os.path.join(test_hr_image_dir, x) for x in os.listdir(test_hr_image_dir)]
-        # How many times the high-resolution image is the low-resolution image
-        self.upscale_factor = upscale_factor
+        self.gt_image_file_names = [os.path.join(test_gt_images_dir, x) for x in os.listdir(test_gt_images_dir)]
+        self.lr_image_file_names = [os.path.join(test_lr_images_dir, x) for x in os.listdir(test_lr_images_dir)]
 
     def __getitem__(self, batch_index: int) -> [torch.Tensor, torch.Tensor]:
         # Read a batch of image data
-        lr_image = cv2.imread(self.lr_image_file_names[batch_index], cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.
-        hr_image = cv2.imread(self.hr_image_file_names[batch_index], cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.
+        gt_image = cv2.imread(self.gt_image_file_names[batch_index]).astype(np.float32) / 255.
+        lr_image = cv2.imread(self.lr_image_file_names[batch_index]).astype(np.float32) / 255.
 
-        # Only extract the image data of the Y channel
-        lr_y_image = imgproc.bgr2ycbcr(lr_image, use_y_channel=True)
-        hr_y_image = imgproc.bgr2ycbcr(hr_image, use_y_channel=True)
+        # BGR convert Y channel
+        gt_y_image = imgproc.bgr_to_ycbcr(gt_image, only_use_y_channel=True)
+        lr_y_image = imgproc.bgr_to_ycbcr(lr_image, only_use_y_channel=True)
 
         # Convert image data into Tensor stream format (PyTorch).
         # Note: The range of input and output is between [0, 1]
-        lr_y_tensor = imgproc.image2tensor(lr_y_image, range_norm=False, half=False)
-        hr_y_tensor = imgproc.image2tensor(hr_y_image, range_norm=False, half=False)
+        gt_y_tensor = imgproc.image_to_tensor(gt_y_image, False, False)
+        lr_y_tensor = imgproc.image_to_tensor(lr_y_image, False, False)
 
-        return {"lr": lr_y_tensor, "hr": hr_y_tensor}
+        return {"gt": gt_y_tensor, "lr": lr_y_tensor}
 
     def __len__(self) -> int:
-        return len(self.lr_image_file_names)
+        return len(self.gt_image_file_names)
 
 
 class PrefetchGenerator(threading.Thread):
@@ -169,7 +170,7 @@ class CPUPrefetcher:
         dataloader (DataLoader): Data loader. Combines a dataset and a sampler, and provides an iterable over the given dataset.
     """
 
-    def __init__(self, dataloader) -> None:
+    def __init__(self, dataloader: DataLoader) -> None:
         self.original_dataloader = dataloader
         self.data = iter(dataloader)
 
@@ -194,7 +195,7 @@ class CUDAPrefetcher:
         device (torch.device): Specify running device.
     """
 
-    def __init__(self, dataloader, device: torch.device):
+    def __init__(self, dataloader: DataLoader, device: torch.device):
         self.batch_data = None
         self.original_dataloader = dataloader
         self.device = device

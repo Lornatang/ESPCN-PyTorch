@@ -1,24 +1,23 @@
 # Usage
 
-## Download datasets
+## Step1: Download datasets
 
 Contains DIV2K, DIV8K, Flickr2K, OST, T91, Set5, Set14, BSDS100 and BSDS200, etc.
 
 - [Google Driver](https://drive.google.com/drive/folders/1A6lzGeQrFMxPqJehK9s37ce-tPDj20mD?usp=sharing)
 - [Baidu Driver](https://pan.baidu.com/s/1o-8Ty_7q6DiS3ykLU09IVg?pwd=llot)
 
-## Train dataset struct information
+## Step2: Prepare the dataset in the following format
 
 ```text
+# Train dataset struct
 - T91
-    - ESPCN
-        - train
-        - valid
-```
+    - original
+        - t1.png
+        - t2.png    
+        ...
 
-## Test dataset struct information
-
-```text
+# Test dataset struct
 - Set5
     - GTmod12
         - baby.png
@@ -28,13 +27,34 @@ Contains DIV2K, DIV8K, Flickr2K, OST, T91, Set5, Set14, BSDS100 and BSDS200, etc
         - baby.png
         - bird.png
         - ...
-- Set14
+```
+
+## Step3: Preprocess the train dataset
+
+```bash
+cd <ESPCN-PyTorch-main>/scripts
+python3 run.py
+```
+
+## Step4: Check that the final dataset directory schema is completely correct
+
+```text
+# Train dataset
+- T91
+    - original
+    - ESPCN
+        - train
+        - valid
+
+# Test dataset
+- Set5
     - GTmod12
-        - baboon.png
-        - barbara.png
+        - baby.png
+        - bird.png
         - ...
     - LRbicx4
-        - baboon.png
-        - barbara.png
+        - baby.png
+        - bird.png
         - ...
+
 ```

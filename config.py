@@ -85,4 +85,4 @@ if mode == "test":
     sr_dir = f"./results/test/{exp_name}"
     gt_dir = "./data/Set5/GTmod12"
 
-    g_model_weights_path = "./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar"
+    model_weights_path = "./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar"

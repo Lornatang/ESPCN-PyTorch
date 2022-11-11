@@ -12,8 +12,10 @@ This repository contains an op-for-op PyTorch reimplementation of [Real-Time Sin
     - [About Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network](#about-real-time-single-image-and-video-super-resolution-using-an-efficient-sub-pixel-convolutional-neural-network)
     - [Download weights](#download-weights)
     - [Download datasets](#download-datasets)
-    - [Test](#test)
-    - [Train](#train)
+    - [How Test and Train](#how-test-and-train)
+        - [Test ESPCN_x4](#test-espcn_x4)
+        - [Train ESPCN_x4](#train-espcn_x4)
+        - [Resume ESPCN_x4](#resume-train-espcn_x4)
     - [Result](#result)
     - [Credit](#credit)
         - [Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network](#real-time-single-image-and-video-super-resolution-using-an-efficient-sub-pixel-convolutional-neural-network)
@@ -46,40 +48,90 @@ Contains DIV2K, DIV8K, Flickr2K, OST, T91, Set5, Set14, BSDS100 and BSDS200, etc
 - [Google Driver](https://drive.google.com/drive/folders/1A6lzGeQrFMxPqJehK9s37ce-tPDj20mD?usp=sharing)
 - [Baidu Driver](https://pan.baidu.com/s/1o-8Ty_7q6DiS3ykLU09IVg?pwd=llot)
 
-## Test
+Please refer to `README.md` in the `data` directory for the method of making a dataset.
 
-Modify the contents of the file as follows.
+## How Test and Train
 
-- line 29: `upscale_factor` change to the magnification you need to enlarge.
-- line 31: `mode` change Set to valid mode.
-- line 71: `model_path` change weight address after training.
+Both training and testing only need to modify the `config.py` file.
 
-## Train
+### Test ESPCN_x4
 
-Modify the contents of the file as follows.
+Modify the `config.py` file.
 
-- line 29: `upscale_factor` change to the magnification you need to enlarge.
-- line 31: `mode` change Set to valid mode.
+- line 31: `model_arch_name` change to `espcn_x4`.
+- line 36: `upscale_factor` change to `4`.
+- line 38: `mode` change to `test`.
+- line 40: `exp_name` change to `ESPCN_x4-Set5`.
+- line 84: `lr_dir` change to `f"./data/Set5/LRbicx{upscale_factor}"`.
+- line 86: `gt_dir` change to `f"./data/Set5/GTmod12"`.
+- line 88: `model_weights_path` change to `./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar`.
 
-If you want to load weights that you've trained before, modify the contents of the file as follows.
+```bash
+python3 test.py
+```
 
-- line 47: `start_epoch` change number of training iterations in the previous round.
-- line 48: `resume` change weight address that needs to be loaded.
+### Train ESPCN_x4
+
+Modify the `config.py` file.
+
+- line 31: `model_arch_name` change to `espcn_x4`.
+- line 36: `upscale_factor` change to `4`.
+- line 38: `mode` change to `test`.
+- line 40: `exp_name` change to `ESPCN_x4-Set5`.
+- line 84: `lr_dir` change to `f"./data/Set5/LRbicx{upscale_factor}"`.
+- line 86: `gt_dir` change to `f"./data/Set5/GTmod12"`.
+
+```bash
+python3 train.py
+```
+
+### Resume train ESPCN_x4
+
+Modify the `config.py` file.
+
+- line 31: `model_arch_name` change to `espcn_x4`.
+- line 36: `upscale_factor` change to `4`.
+- line 38: `mode` change to `test`.
+- line 40: `exp_name` change to `ESPCN_x4-Set5`.
+- line 57: `resume_model_weights_path` change to `./samples/ESPCN_x4-Set5/epoch_xxx.pth.tar`.
+- line 84: `lr_dir` change to `f"./data/Set5/LRbicx{upscale_factor}"`.
+- line 86: `gt_dir` change to `f"./data/Set5/GTmod12"`.
+
+```bash
+python3 train.py
+```
 
 ## Result
 
-Source of original paper results: https://arxiv.org/pdf/1609.05158v2.pdf
+Source of original paper results: [https://arxiv.org/pdf/1609.05158v2.pdf](https://arxiv.org/pdf/1609.05158v2.pdf)
 
 In the following table, the value in `()` indicates the result of the project, and `-` indicates no test.
 
-| Dataset | Scale |       PSNR       |
-|:-------:|:-----:|:----------------:|
-|  Set5   |   2   |   -(**36.59**)   |
-|  Set5   |   3   | 32.55(**32.50**) |
-|  Set5   |   4   |   -(**30.20**)   |
+|  Method  | Scale | Set5 (PSNR)  |  Set5 (SSIM)  | Set14 (PSNR) | Set14 (SSIM)  |
+|:--------:|:-----:|:------------:|:-------------:|:------------:|:-------------:|
+| ESPCN_x4 |   2   |   -(**-**)   |   -(**-**)    |   -(**-**)   |   -(**-**)    |
+| ESPCN_x4 |   3   | 34.89(**-**) | 0.9312(**-**) | 30.77(**-**) | 0.8503(**-**) |
+| ESPCN_x4 |   4   |   -(**-**)   |   -(**-**)    |   -(**-**)   |   -(**-**)    |
 
-Low Resolution / Super Resolution / High Resolution
-<span align="center"><img src="assets/result.png"/></span>
+```bash
+# Download `ESPCN_x4-T91-64bf5ee4.pth.tar` weights to `./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar`
+# More detail see `README.md<Download weights>`
+python3 ./inference.py
+```
+
+Input:
+
+<span align="center"><img width="360" height="240" src="figure/comic.png"/></span>
+
+Output:
+
+<span align="center"><img width="360" height="240" src="figure/sr_comic.png"/></span>
+
+```text
+Build `espcn_x4` model successfully.
+Load `espcn_x4` model weights `./results/pretrained_models/ESPCN_x4-T91-64bf5ee4.pth.tar` successfully.
+SR image save to `./figure/sr_comic.png`
+```
 
 ### Credit
 

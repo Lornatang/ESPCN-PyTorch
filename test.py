@@ -38,10 +38,10 @@ def main() -> None:
     print(f"Build `{config.model_arch_name}` model successfully.")
 
     # Load the super-resolution bsrgan_model weights
-    checkpoint = torch.load(config.g_model_weights_path, map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(config.model_weights_path, map_location=lambda storage, loc: storage)
     g_model.load_state_dict(checkpoint["state_dict"])
     print(f"Load `{config.model_arch_name}` model weights "
-          f"`{os.path.abspath(config.g_model_weights_path)}` successfully.")
+          f"`{os.path.abspath(config.model_weights_path)}` successfully.")
 
     # Create a folder of super-resolution experiment results
     make_directory(config.sr_dir)

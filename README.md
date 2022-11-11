@@ -121,11 +121,11 @@ python3 ./inference.py
 
 Input:
 
-<span align="center"><img width="360" height="240" src="figure/comic.png"/></span>
+<span align="center"><img width="240" height="360" src="figure/comic.png"/></span>
 
 Output:
 
-<span align="center"><img width="360" height="240" src="figure/sr_comic.png"/></span>
+<span align="center"><img width="240" height="360" src="figure/sr_comic.png"/></span>
 
 ```text
 Build `espcn_x4` model successfully.

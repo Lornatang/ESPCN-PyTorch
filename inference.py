@@ -65,12 +65,12 @@ def main(args):
     lr_y_tensor, lr_cb_image, lr_cr_image = imgproc.preprocess_one_image(args.inputs_path, device)
 
     bic_cb_image = cv2.resize(lr_cb_image,
-                              (int(lr_cb_image.shape[0] * args.upscale_factor),
-                               int(lr_cb_image.shape[1] * args.upscale_factor)),
+                              (int(lr_cb_image.shape[1] * args.upscale_factor),
+                               int(lr_cb_image.shape[0] * args.upscale_factor)),
                               interpolation=cv2.INTER_CUBIC)
     bic_cr_image = cv2.resize(lr_cr_image,
-                              (int(lr_cr_image.shape[0] * args.upscale_factor),
-                               int(lr_cr_image.shape[1] * args.upscale_factor)),
+                              (int(lr_cr_image.shape[1] * args.upscale_factor),
+                               int(lr_cr_image.shape[0] * args.upscale_factor)),
                               interpolation=cv2.INTER_CUBIC)
     # Use the model to generate super-resolved images
     with torch.no_grad():
@@ -80,7 +80,7 @@ def main(args):
     sr_y_image = imgproc.tensor_to_image(sr_y_tensor, range_norm=False, half=False)
     sr_y_image = sr_y_image.astype(np.float32) / 255.0
 
-    sr_ycbcr_image = cv2.merge([np.transpose(sr_y_image[:, :, 0], (1, 0)), bic_cb_image, bic_cr_image])
+    sr_ycbcr_image = cv2.merge([sr_y_image[:, :, 0], bic_cb_image, bic_cr_image])
     sr_image = imgproc.ycbcr_to_bgr(sr_ycbcr_image)
     cv2.imwrite(args.output_path, sr_image * 255.0)
 
